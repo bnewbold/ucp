@@ -1,0 +1,7 @@
+[package]
+name = "iceftp"
+version = "0.1.0"
+authors = ["bnewbold <bnewbold@robocracy.org>"]
+
+[dependencies]
+utp = "*"

@@ -1,7 +1,8 @@
 [package]
-name = "iceftp"
+name = "ucp"
 version = "0.1.0"
 authors = ["bnewbold <bnewbold@robocracy.org>"]
 
 [dependencies]
+getopts = "0.2"
 utp = "*"

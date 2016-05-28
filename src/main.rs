@@ -11,15 +11,14 @@ use std::process::exit;
 use getopts::Options;
 use utp::{UtpSocket, UtpListener};
 
-fn usage(prog_name: &str, opts: Options) {
-    let brief = format!("usage:\t{} [-h] [-v] [[user@]host1:]srcfile [[user@]host2:]destfile", prog_name);
+fn usage(opts: Options) {
+    let brief = "usage:\tucp [-h] [-v] [[user@]host1:]srcfile [[user@]host2:]destfile";
     print!("{}", opts.usage(&brief));
 }
 
 fn main() {
 
     let args: Vec<String> = env::args().collect();
-    let prog_name = args[0].clone();
 
     // First check for "hidden" server mode
     if args.len() > 1 && args[1] == "server" {
@@ -29,25 +28,26 @@ fn main() {
 
     let mut opts = Options::new();
     opts.optflag("h", "help", "print this help menu");
-    opts.optflag("v", "verbose", "more debugging messages");
+    //opts.optflag("v", "verbose", "more debugging messages");
     opts.optflag("r", "recursive", "whether to recursively transfer files (directory)");
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => { m }
-        Err(f) => { println!("Error parsing args!"); usage(&prog_name, opts); exit(-1); }
+        Err(f) => { println!("Error parsing args: {}", f); usage(opts); exit(-1); }
     };
 
-    let verbose: bool = matches.opt_present("v");
+    //let verbose: bool = matches.opt_present("v");
+    let recursive: bool = matches.opt_present("r");
 
     if matches.opt_present("h") {
-        usage(&prog_name, opts);
+        usage(opts);
         return;
     }
 
     if matches.free.len() != 2 {
         println!("Expected a single source and single destination");
         println!("");
-        usage(&prog_name, opts);
+        usage(opts);
         return;
     }
 
@@ -71,7 +71,7 @@ fn main() {
             let spl: Vec<&str> = srcfile.split(":").collect();
             let host = spl[0];
             let remote_file = spl[1];
-            client::run_client(host, local_file, remote_file, is_recv);
+            client::run_client(host, local_file, remote_file, recursive, is_recv);
             },
         (false, true)   => {
             let is_recv = false;
@@ -79,7 +79,7 @@ fn main() {
             let spl: Vec<&str> = destfile.split(":").collect();
             let host = spl[0];
             let local_file = spl[1];
-            client::run_client(host, local_file, remote_file, is_recv);
+            client::run_client(host, local_file, remote_file, recursive, is_recv);
             },
     }
 }

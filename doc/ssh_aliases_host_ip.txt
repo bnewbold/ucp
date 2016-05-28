@@ -1,0 +1,38 @@
+
+An important feature for ucp is to be able to use the same hostnames as SSH
+(and thus scp). SSH allows hostname aliases defined in ~/.ssh/config, which
+will resolve differently from other hostnames, so this is non-trivial. It's
+also possible that the SSH connection is bounching through NAT or intermediate
+SSH hops along the way, because the internet is broken, so it's even more
+non-trivial.
+
+One solution is to have users add identical aliases in /etc/hosts instead of
+~/.ssh/config. Meh.
+
+Another solution ("remote-report") would be to have the remote server return
+the IP address which it has opened the uTP (UDP) socket on. The problem with
+this is that the remote server might be behind NAT, in which case it's
+perceived listening IP address would not be a legit globally routable IP.
+
+Another solution ("local-resolve") is to punt and force folks to only use
+globally-resolvable hostnames or numeric IP addresses on the command line.
+
+Another solution ("proxy-command") is to do a weird tangled heirarchy thing
+where SSH uses the ProxyCommand option to re-call the ucp executable itself
+with the "full" hostname and port specified as additional arguments; ucp would
+know what it needs to know internally, and re-call SSH without these options to
+create the actual connection (?).
+
+A great solution would be if there was a command for resolving SSH hostnames
+(returning a "real" hostname), but I don't think such a thing exists.
+
+A "manual-fallback" would be to allow the user to specify all the connect() and
+bind() IP addresses and ports with command line flags.
+
+scp doesn't have this problem because it's just using the SSH connection.
+
+mosh is increasingly complicated and as of Spring 2016 allows several of the
+above solutions with command line args.
+
+The current proposed solution is to default to "remote-report" and have a flag
+to the client command to use "local-resolve" instead.

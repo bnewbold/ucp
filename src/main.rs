@@ -1,9 +1,13 @@
 
+// XXX: re-enable these warnings
+#![allow(unused_imports, unused_variables)]
+
 extern crate getopts;
 extern crate utp;
 
 mod client;
 mod server;
+mod common;
 
 use std::str;
 use std::env;

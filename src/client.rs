@@ -1,6 +1,8 @@
 
 extern crate utp;
 
+use super::common;
+
 use std::string::String;
 use std::env;
 use std::process;
@@ -46,12 +48,11 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
     println!("\thost: {}", remote_host);
     println!("\tsecret: {}", remote_secret);
 
-    let mut buf = [0; 2000];
     let mut socket = UtpSocket::connect((remote_host, remote_port)).unwrap();;
-    socket.send_to("PING".as_bytes());
-    socket.flush();
-    let (amt, _src) = socket.recv_from(&mut buf).ok().unwrap();
-    let reply = String::from_utf8_lossy(&buf[..amt]);
-    println!("Got uTP reply: {}", reply);
-    socket.close();
+    if is_recv {
+        common::receive_files(&mut socket, local_file, remote_is_dir);
+    } else {
+        common::send_files(&mut socket, local_file, remote_is_dir);
+    }
+    socket.close().unwrap();
 }

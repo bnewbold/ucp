@@ -3,6 +3,8 @@ extern crate getopts;
 extern crate utp;
 extern crate daemonize;
 
+use super::common;
+
 use std::str;
 use std::env;
 use std::env::home_dir;
@@ -10,7 +12,7 @@ use std::process::exit;
 use getopts::Options;
 use utp::{UtpSocket, UtpListener};
 
-fn run_server(path: &str, is_receive: bool) {
+fn run_server(path: &str, is_recv: bool, recursive: bool) {
 
     // TODO: try to detect the address the SSH connection came in on via the SSH_CONNECTION env
     // variable.
@@ -46,18 +48,12 @@ fn run_server(path: &str, is_receive: bool) {
     let (mut socket, _src) = listener.accept().unwrap();
     println!("Got connection from {}", socket.peer_addr().unwrap());
 
-    loop {
-
-        let mut buf = [0; 1000];
-        let (amt, _src) = socket.recv_from(&mut buf).ok().unwrap();
-        if amt <= 0 {
-            break;
-        }
-        let buf = &buf[..amt];
-        let s = str::from_utf8(buf).unwrap();
-        println!("\tgot: {}", s);
-        socket.send_to(buf);
+    if is_recv {
+        common::receive_files(&mut socket, path, recursive);
+    } else {
+        common::send_files(&mut socket, path, recursive);
     }
+    socket.close().unwrap();
 }
 
 fn usage_server(opts: Options) {
@@ -101,9 +97,9 @@ pub fn main_server() {
     }
 
     if matches.opt_present("f") {
-        run_server(&matches.opt_str("f").unwrap(), false);
+        run_server(&matches.opt_str("f").unwrap(), false, dir_mode);
     }
     if matches.opt_present("t") {
-        run_server(&matches.opt_str("t").unwrap(), true);
+        run_server(&matches.opt_str("t").unwrap(), true, dir_mode);
     }
 }

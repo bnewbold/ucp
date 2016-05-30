@@ -47,13 +47,14 @@ fn run_server(path: &str, is_recv: bool, recursive: bool) {
 
     let (mut socket, _src) = listener.accept().unwrap();
     println!("Got connection from {}", socket.peer_addr().unwrap());
+    let mut stream = socket.into();
 
     if is_recv {
-        common::receive_files(&mut socket, path, recursive);
+        common::sink_files(&mut stream, path, recursive);
     } else {
-        common::send_files(&mut socket, path, recursive);
+        common::source_files(&mut stream, path, recursive);
     }
-    socket.close().unwrap();
+    stream.close().unwrap();
 }
 
 fn usage_server(opts: Options) {

@@ -1,6 +1,6 @@
 
 // XXX: re-enable these warnings
-#![allow(unused_imports, unused_variables)]
+#![allow(unused_imports, unused_variables, unused_mut)]
 
 extern crate getopts;
 extern crate utp;

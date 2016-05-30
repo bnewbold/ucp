@@ -49,10 +49,11 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
     println!("\tsecret: {}", remote_secret);
 
     let mut socket = UtpSocket::connect((remote_host, remote_port)).unwrap();;
+    let mut stream = socket.into();
     if is_recv {
-        common::receive_files(&mut socket, local_file, remote_is_dir);
+        common::sink_files(&mut stream, local_file, remote_is_dir);
     } else {
-        common::send_files(&mut socket, local_file, remote_is_dir);
+        common::source_files(&mut stream, local_file, remote_is_dir);
     }
-    socket.close().unwrap();
+    stream.close().unwrap();
 }

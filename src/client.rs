@@ -1,7 +1,4 @@
 
-extern crate getopts;
-extern crate utp;
-
 use super::common;
 
 use std::string::String;
@@ -11,6 +8,8 @@ use std::process::exit;
 use std::process::Command;
 use getopts::Options;
 use utp::{UtpSocket, UtpStream};
+use crypto::{SecretStream, key2string, string2key};
+use sodiumoxide::crypto::secretbox;
 
 pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir: bool, is_recv: bool) {
     println!("\thost: {}", host);
@@ -53,12 +52,16 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
 
     let mut socket = UtpSocket::connect((remote_host, remote_port)).unwrap();;
     let mut stream: UtpStream = socket.into();
+    let mut stream = SecretStream::new(stream);
+    stream.key = string2key(remote_secret).unwrap();
+
     if is_recv {
         common::sink_files(&mut stream, local_file, remote_is_dir);
     } else {
         common::source_files(&mut stream, local_file, remote_is_dir);
     }
-    stream.close().unwrap();
+    // XXX: does Drop do this well enough?
+    //stream.close().unwrap();
 }
 
 fn usage_client(opts: Options) {

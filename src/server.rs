@@ -1,6 +1,4 @@
 
-extern crate getopts;
-extern crate utp;
 extern crate daemonize;
 
 use super::common;
@@ -11,6 +9,8 @@ use std::env::home_dir;
 use std::process::exit;
 use getopts::Options;
 use utp::{UtpSocket, UtpStream, UtpListener};
+use crypto::{SecretStream, key2string, string2key};
+use sodiumoxide::crypto::secretbox;
 
 fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool) {
 
@@ -26,8 +26,10 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool) {
     let listen_port = listener.local_addr().unwrap().port();
     let listen_addr = listener.local_addr().unwrap().ip();
 
+    let secret_key = secretbox::gen_key();
+
     // Send back details so client can connect
-    println!("UCP CONNECT {} {} {}", listen_addr, listen_port, "<SECRET>");
+    println!("UCP CONNECT {} {} {}", listen_addr, listen_port, key2string(&secret_key));
 
     // TODO: maybe wait for an ACK of some sort here before daemonizing?
 
@@ -52,13 +54,16 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool) {
     let (mut socket, _src) = listener.accept().unwrap();
     println!("Got connection from {}", socket.peer_addr().unwrap());
     let mut stream: UtpStream = socket.into();
+    let mut stream = SecretStream::new(stream);
+    stream.key = secret_key;
 
     if is_recv {
         common::sink_files(&mut stream, path, recursive);
     } else {
         common::source_files(&mut stream, path, recursive);
     }
-    stream.close().unwrap();
+    // XXX: does Drop do this well enough?
+    //stream.close().unwrap();
 }
 
 fn usage_server(opts: Options) {

@@ -4,10 +4,13 @@
 
 extern crate getopts;
 extern crate utp;
+extern crate sodiumoxide;
+extern crate rustc_serialize;
 
 mod client;
 mod server;
 mod common;
+mod crypto;
 
 use std::str;
 use std::env;
@@ -23,6 +26,7 @@ fn usage(opts: Options) {
 fn main() {
 
     let args: Vec<String> = env::args().collect();
+    sodiumoxide::init();
 
     // First check for "hidden" server and client modes
     if args.len() > 1 && args[1] == "server" {

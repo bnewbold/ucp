@@ -17,6 +17,19 @@ that. There is a bunch of overhead sending small files, so if you have a lot of
 those and a high-latency link you should probably `tar` things up first. There
 also isn't any compression, so you might want to `gzip` that tarball.
 
+### Dependencies
+
+You need the Sodium (wrapper for NaCl) library and headers installed. On Linux,
+this is, eg, libsodium-dev.
+
+Uses sodiumoxide instead of rust-crypto because there aren't online docs for
+rust-crypto, and AFAIK Sodium and NaCl have been reviewed and rust-crypto has
+not.
+
+Uses rustc-serialize instead of serde, because serde seems more complicated
+(both nightly/compiler API and a non-macro API?) and doesn't seem to support
+base64.
+
 ### Usage
 
 The command must be installed on both the local and remote machines.

@@ -4,6 +4,8 @@ version = "0.1.0"
 authors = ["bnewbold <bnewbold@robocracy.org>"]
 
 [dependencies]
-getopts = "0.2"
-daemonize = "0.2"
+getopts = "^0.2"
+daemonize = "^0.2"
 utp = "*"
+sodiumoxide = "*"
+rustc-serialize = "0.3"

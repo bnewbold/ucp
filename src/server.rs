@@ -30,11 +30,12 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool) {
     let read_nonce = secretbox::gen_nonce();
     let write_nonce = secretbox::gen_nonce();
 
-    // XXX:
+    /* XXX: DEBUG:
     assert!(secret_key == string2key(&key2string(&secret_key)).unwrap());
     assert!(read_nonce == string2nonce(&nonce2string(&read_nonce)).unwrap());
     let read_nonce = secretbox::Nonce::from_slice(&[0; secretbox::NONCEBYTES]).unwrap();
     let write_nonce = secretbox::Nonce::from_slice(&[0; secretbox::NONCEBYTES]).unwrap();
+    */
 
     // Send back details so client can connect
     println!("UCP CONNECT {} {} {} {} {}",

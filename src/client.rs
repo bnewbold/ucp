@@ -51,8 +51,8 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
     println!("\tport: {}", remote_port);
     println!("\thost: {}", remote_host);
     println!("\tsecret key: {}", remote_secret);
-    println!("\tsecret read key: {}", remote_read_nonce);
-    println!("\tsecret write key: {}", remote_write_nonce);
+    println!("\tsecret read nonce: {}", remote_read_nonce);
+    println!("\tsecret write nonce: {}", remote_write_nonce);
 
     let mut socket = UtpSocket::connect((remote_host, remote_port)).unwrap();;
     let mut stream: UtpStream = socket.into();
@@ -125,9 +125,10 @@ pub fn main_client() {
     stream.read_nonce = string2nonce(&matches.opt_str("read-nonce").unwrap()).unwrap();
     stream.write_nonce = string2nonce(&matches.opt_str("write-nonce").unwrap()).unwrap();
 
-    // XXX:
+    /* XXX: DEBUG:
     stream.read_nonce = secretbox::Nonce::from_slice(&[0; secretbox::NONCEBYTES]).unwrap();
     stream.write_nonce = secretbox::Nonce::from_slice(&[0; secretbox::NONCEBYTES]).unwrap();
+    */
 
     if matches.opt_present("f") {
         common::source_files(&mut stream, &matches.opt_str("f").unwrap(), dir_mode);

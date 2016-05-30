@@ -9,7 +9,7 @@ use std::env::home_dir;
 use std::process::exit;
 use getopts::Options;
 use utp::{UtpSocket, UtpStream, UtpListener};
-use crypto::{SecretStream, key2string, string2key};
+use crypto::{SecretStream, key2string, string2key, nonce2string, string2nonce};
 use sodiumoxide::crypto::secretbox;
 
 fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool) {
@@ -27,9 +27,23 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool) {
     let listen_addr = listener.local_addr().unwrap().ip();
 
     let secret_key = secretbox::gen_key();
+    let read_nonce = secretbox::gen_nonce();
+    let write_nonce = secretbox::gen_nonce();
+
+    // XXX:
+    assert!(secret_key == string2key(&key2string(&secret_key)).unwrap());
+    assert!(read_nonce == string2nonce(&nonce2string(&read_nonce)).unwrap());
+    let read_nonce = secretbox::Nonce::from_slice(&[0; secretbox::NONCEBYTES]).unwrap();
+    let write_nonce = secretbox::Nonce::from_slice(&[0; secretbox::NONCEBYTES]).unwrap();
 
     // Send back details so client can connect
-    println!("UCP CONNECT {} {} {}", listen_addr, listen_port, key2string(&secret_key));
+    println!("UCP CONNECT {} {} {} {} {}",
+        listen_addr,
+        listen_port,
+        key2string(&secret_key),
+        nonce2string(&read_nonce),
+        nonce2string(&write_nonce));
+
 
     // TODO: maybe wait for an ACK of some sort here before daemonizing?
 
@@ -56,6 +70,8 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool) {
     let mut stream: UtpStream = socket.into();
     let mut stream = SecretStream::new(stream);
     stream.key = secret_key;
+    stream.read_nonce = read_nonce;
+    stream.write_nonce = write_nonce;
 
     if is_recv {
         common::sink_files(&mut stream, path, recursive);

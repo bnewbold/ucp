@@ -8,7 +8,7 @@ use std::process::exit;
 use std::process::Command;
 use getopts::Options;
 use utp::{UtpSocket, UtpStream};
-use crypto::{SecretStream, key2string, string2key};
+use crypto::{SecretStream, key2string, string2key, nonce2string, string2nonce};
 use sodiumoxide::crypto::secretbox;
 
 pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir: bool, is_recv: bool) {
@@ -38,22 +38,28 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
     let reply = String::from_utf8_lossy(&ssh_output.stdout);
     println!("SSH reply: {}", reply);
     let words: Vec<&str> = reply.split_whitespace().collect();
-    if words.len() != 5 || words[0] != "UCP" || words[1] != "CONNECT" {
+    if words.len() != 7 || words[0] != "UCP" || words[1] != "CONNECT" {
         panic!("Unexpected data via SSH pipe (TCP)");
     }
     let remote_host = words[2];
     let remote_port = words[3].parse::<u16>().expect("failed to parse remote port number");
     let remote_secret = words[4];
+    let remote_read_nonce = words[5];
+    let remote_write_nonce = words[6];
 
     println!("Got remote details:");
     println!("\tport: {}", remote_port);
     println!("\thost: {}", remote_host);
-    println!("\tsecret: {}", remote_secret);
+    println!("\tsecret key: {}", remote_secret);
+    println!("\tsecret read key: {}", remote_read_nonce);
+    println!("\tsecret write key: {}", remote_write_nonce);
 
     let mut socket = UtpSocket::connect((remote_host, remote_port)).unwrap();;
     let mut stream: UtpStream = socket.into();
     let mut stream = SecretStream::new(stream);
     stream.key = string2key(remote_secret).unwrap();
+    stream.read_nonce = string2nonce(remote_write_nonce).unwrap();
+    stream.write_nonce = string2nonce(remote_read_nonce).unwrap();
 
     if is_recv {
         common::sink_files(&mut stream, local_file, remote_is_dir);
@@ -83,6 +89,9 @@ pub fn main_client() {
     opts.optopt("t", "to", "file or dir to write to (client side)", "FILE");
     opts.reqopt("", "host", "remote hostname to connect to", "HOSTNAME");
     opts.reqopt("", "port", "remote port to connect to", "PORT");
+    opts.reqopt("", "read-nonce", "secret read nonce", "NONCE");
+    opts.reqopt("", "write-nonce", "secret write nonce", "NONCE");
+    opts.reqopt("", "key", "secret key", "NONCE");
 
     assert!(args.len() >= 2 && args[1] == "client");
     let matches = match opts.parse(&args[2..]) {
@@ -110,11 +119,22 @@ pub fn main_client() {
     let mut socket = UtpSocket::connect((matches.opt_str("host").unwrap().as_str(), port)).unwrap();
     let mut stream: UtpStream = socket.into();
     println!("opened socket");
+
+    let mut stream = SecretStream::new(stream);
+    stream.key = string2key(&matches.opt_str("key").unwrap()).unwrap();
+    stream.read_nonce = string2nonce(&matches.opt_str("read-nonce").unwrap()).unwrap();
+    stream.write_nonce = string2nonce(&matches.opt_str("write-nonce").unwrap()).unwrap();
+
+    // XXX:
+    stream.read_nonce = secretbox::Nonce::from_slice(&[0; secretbox::NONCEBYTES]).unwrap();
+    stream.write_nonce = secretbox::Nonce::from_slice(&[0; secretbox::NONCEBYTES]).unwrap();
+
     if matches.opt_present("f") {
         common::source_files(&mut stream, &matches.opt_str("f").unwrap(), dir_mode);
     }
     if matches.opt_present("t") {
         common::sink_files(&mut stream, &matches.opt_str("t").unwrap(), dir_mode);
     }
-    stream.close().unwrap();
+    // XXX: does Drop do this well enough?
+    //stream.close().unwrap();
 }

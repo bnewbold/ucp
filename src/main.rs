@@ -24,9 +24,12 @@ fn main() {
 
     let args: Vec<String> = env::args().collect();
 
-    // First check for "hidden" server mode
+    // First check for "hidden" server and client modes
     if args.len() > 1 && args[1] == "server" {
         server::main_server();
+        return;
+    } else if args.len() > 1 && args[1] == "client" {
+        client::main_client();
         return;
     }
 

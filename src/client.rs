@@ -1,4 +1,5 @@
 
+extern crate getopts;
 extern crate utp;
 
 use super::common;
@@ -6,7 +7,9 @@ use super::common;
 use std::string::String;
 use std::env;
 use std::process;
+use std::process::exit;
 use std::process::Command;
+use getopts::Options;
 use utp::{UtpSocket};
 
 pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir: bool, is_recv: bool) {
@@ -36,7 +39,7 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
     let reply = String::from_utf8_lossy(&ssh_output.stdout);
     println!("SSH reply: {}", reply);
     let words: Vec<&str> = reply.split_whitespace().collect();
-    if words.len() != 5 || words[0] != "UDP" || words[1] != "CONNECT" {
+    if words.len() != 5 || words[0] != "UCP" || words[1] != "CONNECT" {
         panic!("Unexpected data via SSH pipe (TCP)");
     }
     let remote_host = words[2];
@@ -54,6 +57,61 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
         common::sink_files(&mut stream, local_file, remote_is_dir);
     } else {
         common::source_files(&mut stream, local_file, remote_is_dir);
+    }
+    stream.close().unwrap();
+}
+
+fn usage_client(opts: Options) {
+    let brief = "usage:\tucp client ..."; // XXX:
+    println!("");
+    println!("IMPORTANT: this is the client mode of ucp. Unless you are developing/debugging, you probably want the 'regular' one (from the 'client' from you command)");
+    print!("{}", opts.usage(&brief));
+}
+
+pub fn main_client() {
+
+    let args: Vec<String> = env::args().collect();
+
+    let mut opts = Options::new();
+    opts.optflag("h", "help", "print this help menu");
+    //opts.optflag("v", "verbose", "more debugging messages");
+    opts.optflag("d", "dir-mode", "read/write a dir instead of file (client side)");
+    opts.optopt("f", "from", "file or dir to read from (client side)", "FILE");
+    opts.optopt("t", "to", "file or dir to write to (client side)", "FILE");
+    opts.reqopt("", "host", "remote hostname to connect to", "HOSTNAME");
+    opts.reqopt("", "port", "remote port to connect to", "PORT");
+
+    assert!(args.len() >= 2 && args[1] == "client");
+    let matches = match opts.parse(&args[2..]) {
+        Ok(m) => { m }
+        Err(f) => { println!("Error parsing args!"); usage_client(opts); exit(-1); }
+    };
+
+    if matches.opt_present("h") {
+        usage_client(opts);
+        return;
+    }
+
+    //let verbose: bool = matches.opt_present("v");
+    let dir_mode: bool = matches.opt_present("d");
+
+    match (matches.opt_present("f"), matches.opt_present("t")) {
+        (true, true) | (false, false) => {
+            println!("Must be either 'from' or 'to', but not both");
+            exit(-1);
+            },
+        _ => {},
+    }
+
+    let port = matches.opt_str("port").unwrap().parse::<u16>().unwrap();
+    let mut socket = UtpSocket::connect((matches.opt_str("host").unwrap().as_str(), port)).unwrap();
+    let mut stream = socket.into();
+    println!("opened socket");
+    if matches.opt_present("f") {
+        common::source_files(&mut stream, &matches.opt_str("f").unwrap(), dir_mode);
+    }
+    if matches.opt_present("t") {
+        common::sink_files(&mut stream, &matches.opt_str("t").unwrap(), dir_mode);
     }
     stream.close().unwrap();
 }

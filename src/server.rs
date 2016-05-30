@@ -12,7 +12,7 @@ use std::process::exit;
 use getopts::Options;
 use utp::{UtpSocket, UtpListener};
 
-fn run_server(path: &str, is_recv: bool, recursive: bool) {
+fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool) {
 
     // TODO: try to detect the address the SSH connection came in on via the SSH_CONNECTION env
     // variable.
@@ -27,23 +27,27 @@ fn run_server(path: &str, is_recv: bool, recursive: bool) {
     let listen_addr = listener.local_addr().unwrap().ip();
 
     // Send back details so client can connect
-    println!("UDP CONNECT {} {} {}", listen_addr, listen_port, "<SECRET>");
+    println!("UCP CONNECT {} {} {}", listen_addr, listen_port, "<SECRET>");
 
     // TODO: maybe wait for an ACK of some sort here before daemonizing?
 
-    // At this point we partially daemonize (fork and redirect terminal), so that SSH will drop us.
-    // But, don't clobber working dir.
-    let working_dir = match env::home_dir() {
-        Some(path) => path,
-        None => env::current_dir().unwrap(),
-    };
-    // XXX: should maybe use log/syslog from here on?
-    let daemonizer = daemonize::Daemonize::new().working_directory(working_dir);
+    if daemonize {
+        // At this point we partially daemonize (fork and redirect terminal), so that SSH will drop us.
+        // But, don't clobber working dir.
+        let working_dir = match env::home_dir() {
+            Some(path) => path,
+            None => env::current_dir().unwrap(),
+        };
+        // XXX: should maybe use log/syslog from here on?
+        let daemonizer = daemonize::Daemonize::new().working_directory(working_dir);
 
-    match daemonizer.start() {
-         Ok(_) => println!("Success, daemonized"),
-         Err(e) => println!("{}", e),
-     }
+        match daemonizer.start() {
+            Ok(_) => println!("Success, daemonized"),
+            Err(e) => println!("{}", e),
+        }
+    } else {
+        println!("Not daemonizing (DEBUG MODE)");
+    }
 
     let (mut socket, _src) = listener.accept().unwrap();
     println!("Got connection from {}", socket.peer_addr().unwrap());
@@ -72,6 +76,7 @@ pub fn main_server() {
     opts.optflag("h", "help", "print this help menu");
     //opts.optflag("v", "verbose", "more debugging messages");
     opts.optflag("d", "dir-mode", "read/write a dir instead of file (server side)");
+    opts.optflag("", "no-daemonize", "don't daemonize (for debuggign)");
     opts.optopt("f", "from", "file or dir to read from (server side)", "FILE");
     opts.optopt("t", "to", "file or dir to write to (server side)", "FILE");
 
@@ -88,6 +93,7 @@ pub fn main_server() {
 
     //let verbose: bool = matches.opt_present("v");
     let dir_mode: bool = matches.opt_present("d");
+    let daemonize: bool = !matches.opt_present("no-daemonize");
 
     match (matches.opt_present("f"), matches.opt_present("t")) {
         (true, true) | (false, false) => {
@@ -98,9 +104,9 @@ pub fn main_server() {
     }
 
     if matches.opt_present("f") {
-        run_server(&matches.opt_str("f").unwrap(), false, dir_mode);
+        run_server(&matches.opt_str("f").unwrap(), false, dir_mode, daemonize);
     }
     if matches.opt_present("t") {
-        run_server(&matches.opt_str("t").unwrap(), true, dir_mode);
+        run_server(&matches.opt_str("t").unwrap(), true, dir_mode, daemonize);
     }
 }

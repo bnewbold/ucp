@@ -13,6 +13,7 @@ use utp::{UtpStream};
 
 
 pub fn source_files(stream: &mut UtpStream, file_path: &str, recursive: bool) {
+    println!("SOURCE FILE: {}", file_path);
     if recursive { unimplemented!(); }
     let mut f = File::open(file_path).unwrap();
     let metadata = f.metadata().unwrap();
@@ -21,8 +22,9 @@ pub fn source_files(stream: &mut UtpStream, file_path: &str, recursive: bool) {
     let flen: usize = metadata.len() as usize;
 
     // Format as 4 digits octal, left-padding with zero
-    let line = format!("C{:0<4o} {} {}\n", fmode, flen, file_path);
+    let line = format!("C{:0>4o} {} {}\n", fmode, flen, file_path);
     stream.write_all(line.as_bytes()).unwrap();
+    println!("{}", line);
 
     let mut byte_buf = [0; 1];
     stream.read_exact(&mut byte_buf).unwrap();
@@ -43,6 +45,7 @@ pub fn source_files(stream: &mut UtpStream, file_path: &str, recursive: bool) {
         let mut wbuf = &mut buf[..rlen];
         stream.write_all(&wbuf).unwrap();
         sent += rlen;
+        //println!("sent: {}", sent);
     }
     // f.close(); XXX:
     stream.read_exact(&mut byte_buf).unwrap();
@@ -73,6 +76,7 @@ fn raw_read_line(stream: &mut UtpStream) -> io::Result<String> {
 // implementations of Read and Write on immutable references to UtpStream (a la TcpStream, File, et
 // al)
 pub fn sink_files(stream: &mut UtpStream, file_path: &str, recursive: bool) {
+    println!("SINK FILE: {}", file_path);
     if recursive { unimplemented!(); }
     let mut f = File::create(file_path).unwrap();
 
@@ -81,13 +85,17 @@ pub fn sink_files(stream: &mut UtpStream, file_path: &str, recursive: bool) {
     stream.read_exact(&mut byte_buf).unwrap();
     let msg_type = byte_buf[0];
     match msg_type as char {
-        'C' => {} // pass
+        'C' => {
+            println!("Going to create!");
+        },
         'D' => { unimplemented!(); },
         'E' => { unimplemented!(); },
         'T' => { unimplemented!(); },
         _   => { panic!(format!("Unexpected message type: {}", msg_type)); },
     };
     let line = raw_read_line(stream).unwrap();
+    println!("got msg: {}", line);
+    stream.write(&[0]).unwrap();
     let line: Vec<&str> = line.split_whitespace().collect();
     assert!(line.len() == 3);
     let fmode: u32 = u32::from_str_radix(line[0], 8).unwrap();
@@ -100,6 +108,7 @@ pub fn sink_files(stream: &mut UtpStream, file_path: &str, recursive: bool) {
     let mut received: usize = 0;
     while received < flen {
         let rlen = stream.read(&mut buf).unwrap();
+        //println!("recieved: {}", rlen);
         assert!(rlen > 0);
         let mut wbuf = &mut buf[..rlen];
         f.write_all(&wbuf).unwrap();

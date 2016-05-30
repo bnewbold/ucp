@@ -41,6 +41,7 @@ fn main() {
     opts.optflag("h", "help", "print this help menu");
     //opts.optflag("v", "verbose", "more debugging messages");
     opts.optflag("r", "recursive", "whether to recursively transfer files (directory)");
+    opts.optflag("", "no-crypto", "sends data in the clear (no crypto or verification)");
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => { m }
@@ -49,6 +50,7 @@ fn main() {
 
     //let verbose: bool = matches.opt_present("v");
     let recursive: bool = matches.opt_present("r");
+    let no_crypto: bool = matches.opt_present("no-crypto");
 
     if matches.opt_present("h") {
         usage(opts);
@@ -82,7 +84,7 @@ fn main() {
             let spl: Vec<&str> = srcfile.split(":").collect();
             let host = spl[0];
             let remote_file = spl[1];
-            client::run_client(host, local_file, remote_file, recursive, is_recv);
+            client::run_client(host, local_file, remote_file, recursive, is_recv, no_crypto);
             },
         (false, true)   => {
             let is_recv = false;
@@ -90,7 +92,7 @@ fn main() {
             let spl: Vec<&str> = destfile.split(":").collect();
             let host = spl[0];
             let remote_file = spl[1];
-            client::run_client(host, local_file, remote_file, recursive, is_recv);
+            client::run_client(host, local_file, remote_file, recursive, is_recv, no_crypto);
             },
     }
 }

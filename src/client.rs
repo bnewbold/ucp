@@ -11,7 +11,7 @@ use utp::{UtpSocket, UtpStream};
 use crypto::{SecretStream, key2string, string2key, nonce2string, string2nonce};
 use sodiumoxide::crypto::secretbox;
 
-pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir: bool, is_recv: bool) {
+pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir: bool, is_recv: bool, no_crypto: bool) {
     println!("\thost: {}", host);
     println!("\tlocal_file: {}", local_file);
     println!("\tremote_file: {}", remote_file);
@@ -27,6 +27,9 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
 
     if remote_is_dir {
         ssh_cmd.arg("-d");
+    }
+    if no_crypto {
+        ssh_cmd.arg("--no-crypto");
     }
 
     let ssh_output = ssh_cmd.output().expect("couldn't get SSH sub-process output");
@@ -56,15 +59,23 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
 
     let mut socket = UtpSocket::connect((remote_host, remote_port)).unwrap();;
     let mut stream: UtpStream = socket.into();
-    let mut stream = SecretStream::new(stream);
-    stream.key = string2key(remote_secret).unwrap();
-    stream.read_nonce = string2nonce(remote_write_nonce).unwrap();
-    stream.write_nonce = string2nonce(remote_read_nonce).unwrap();
 
-    if is_recv {
-        common::sink_files(&mut stream, local_file, remote_is_dir);
+    if !no_crypto {
+        let mut stream = SecretStream::new(stream);
+        stream.key = string2key(remote_secret).unwrap();
+        stream.read_nonce = string2nonce(remote_write_nonce).unwrap();
+        stream.write_nonce = string2nonce(remote_read_nonce).unwrap();
+        if is_recv {
+            common::sink_files(&mut stream, local_file, remote_is_dir);
+        } else {
+            common::source_files(&mut stream, local_file, remote_is_dir);
+        }
     } else {
-        common::source_files(&mut stream, local_file, remote_is_dir);
+        if is_recv {
+            common::sink_files(&mut stream, local_file, remote_is_dir);
+        } else {
+            common::source_files(&mut stream, local_file, remote_is_dir);
+        }
     }
     // XXX: does Drop do this well enough?
     //stream.close().unwrap();
@@ -92,6 +103,7 @@ pub fn main_client() {
     opts.reqopt("", "read-nonce", "secret read nonce", "NONCE");
     opts.reqopt("", "write-nonce", "secret write nonce", "NONCE");
     opts.reqopt("", "key", "secret key", "NONCE");
+    opts.optflag("", "no-crypto", "sends data in the clear (no crypto or verification)");
 
     assert!(args.len() >= 2 && args[1] == "client");
     let matches = match opts.parse(&args[2..]) {
@@ -106,6 +118,7 @@ pub fn main_client() {
 
     //let verbose: bool = matches.opt_present("v");
     let dir_mode: bool = matches.opt_present("d");
+    let no_crypto: bool = matches.opt_present("no-crypto");
 
     match (matches.opt_present("f"), matches.opt_present("t")) {
         (true, true) | (false, false) => {
@@ -120,22 +133,26 @@ pub fn main_client() {
     let mut stream: UtpStream = socket.into();
     println!("opened socket");
 
-    let mut stream = SecretStream::new(stream);
-    stream.key = string2key(&matches.opt_str("key").unwrap()).unwrap();
-    stream.read_nonce = string2nonce(&matches.opt_str("read-nonce").unwrap()).unwrap();
-    stream.write_nonce = string2nonce(&matches.opt_str("write-nonce").unwrap()).unwrap();
-
-    /* XXX: DEBUG:
-    stream.read_nonce = secretbox::Nonce::from_slice(&[0; secretbox::NONCEBYTES]).unwrap();
-    stream.write_nonce = secretbox::Nonce::from_slice(&[0; secretbox::NONCEBYTES]).unwrap();
-    */
-
-    if matches.opt_present("f") {
-        common::source_files(&mut stream, &matches.opt_str("f").unwrap(), dir_mode);
+    if !no_crypto {
+        let mut stream = SecretStream::new(stream);
+        stream.key = string2key(&matches.opt_str("key").unwrap()).unwrap();
+        stream.read_nonce = string2nonce(&matches.opt_str("read-nonce").unwrap()).unwrap();
+        stream.write_nonce = string2nonce(&matches.opt_str("write-nonce").unwrap()).unwrap();
+        if matches.opt_present("f") {
+            common::source_files(&mut stream, &matches.opt_str("f").unwrap(), dir_mode);
+        }
+        if matches.opt_present("t") {
+            common::sink_files(&mut stream, &matches.opt_str("t").unwrap(), dir_mode);
+        }
+    } else {
+        if matches.opt_present("f") {
+            common::source_files(&mut stream, &matches.opt_str("f").unwrap(), dir_mode);
+        }
+        if matches.opt_present("t") {
+            common::sink_files(&mut stream, &matches.opt_str("t").unwrap(), dir_mode);
+        }
     }
-    if matches.opt_present("t") {
-        common::sink_files(&mut stream, &matches.opt_str("t").unwrap(), dir_mode);
-    }
+
     // XXX: does Drop do this well enough?
     //stream.close().unwrap();
 }

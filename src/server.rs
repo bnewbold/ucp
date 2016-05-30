@@ -10,7 +10,7 @@ use std::env;
 use std::env::home_dir;
 use std::process::exit;
 use getopts::Options;
-use utp::{UtpSocket, UtpListener};
+use utp::{UtpSocket, UtpStream, UtpListener};
 
 fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool) {
 
@@ -51,7 +51,7 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool) {
 
     let (mut socket, _src) = listener.accept().unwrap();
     println!("Got connection from {}", socket.peer_addr().unwrap());
-    let mut stream = socket.into();
+    let mut stream: UtpStream = socket.into();
 
     if is_recv {
         common::sink_files(&mut stream, path, recursive);

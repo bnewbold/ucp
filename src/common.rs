@@ -1,6 +1,4 @@
 
-extern crate utp;
-
 use std::str;
 use std::env;
 use std::path::Path;
@@ -9,10 +7,8 @@ use std::os::unix::fs::PermissionsExt;
 use std::io;
 use std::io::{Read, Write, BufRead, BufReader};
 use std::process::exit;
-use utp::{UtpStream};
 
-
-pub fn source_files(stream: &mut UtpStream, file_path: &str, recursive: bool) {
+pub fn source_files<S: Read + Write>(stream: &mut S, file_path: &str, recursive: bool) {
     println!("SOURCE FILE: {}", file_path);
     if recursive { unimplemented!(); }
     let mut f = File::open(file_path).unwrap();
@@ -59,7 +55,7 @@ pub fn source_files(stream: &mut UtpStream, file_path: &str, recursive: bool) {
     };
 }
 
-fn raw_read_line(stream: &mut UtpStream) -> io::Result<String> {
+fn raw_read_line<S: Read + Write>(stream: &mut S) -> io::Result<String> {
 
     let mut s = String::new();
     let mut byte_buf = [0];
@@ -75,7 +71,7 @@ fn raw_read_line(stream: &mut UtpStream) -> io::Result<String> {
 // TODO: it would be nice to be able to do BufReader/BufWriter on UtpStream. This would require
 // implementations of Read and Write on immutable references to UtpStream (a la TcpStream, File, et
 // al)
-pub fn sink_files(stream: &mut UtpStream, file_path: &str, recursive: bool) {
+pub fn sink_files<S: Read + Write>(stream: &mut S, file_path: &str, recursive: bool) {
     println!("SINK FILE: {}", file_path);
     if recursive { unimplemented!(); }
     let mut f = File::create(file_path).unwrap();

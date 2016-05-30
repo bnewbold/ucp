@@ -10,7 +10,7 @@ use std::process;
 use std::process::exit;
 use std::process::Command;
 use getopts::Options;
-use utp::{UtpSocket};
+use utp::{UtpSocket, UtpStream};
 
 pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir: bool, is_recv: bool) {
     println!("\thost: {}", host);
@@ -52,7 +52,7 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
     println!("\tsecret: {}", remote_secret);
 
     let mut socket = UtpSocket::connect((remote_host, remote_port)).unwrap();;
-    let mut stream = socket.into();
+    let mut stream: UtpStream = socket.into();
     if is_recv {
         common::sink_files(&mut stream, local_file, remote_is_dir);
     } else {
@@ -105,7 +105,7 @@ pub fn main_client() {
 
     let port = matches.opt_str("port").unwrap().parse::<u16>().unwrap();
     let mut socket = UtpSocket::connect((matches.opt_str("host").unwrap().as_str(), port)).unwrap();
-    let mut stream = socket.into();
+    let mut stream: UtpStream = socket.into();
     println!("opened socket");
     if matches.opt_present("f") {
         common::source_files(&mut stream, &matches.opt_str("f").unwrap(), dir_mode);

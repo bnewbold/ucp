@@ -82,10 +82,10 @@ fn main() {
             },
         (false, true)   => {
             let is_recv = false;
-            let remote_file = &srcfile;
+            let local_file = &srcfile;
             let spl: Vec<&str> = destfile.split(":").collect();
             let host = spl[0];
-            let local_file = spl[1];
+            let remote_file = spl[1];
             client::run_client(host, local_file, remote_file, recursive, is_recv);
             },
     }

@@ -102,7 +102,8 @@ pub fn sink_files(stream: &mut UtpStream, file_path: &str, recursive: bool) {
     let flen: usize = line[1].parse::<usize>().unwrap();
     let fpath = Path::new(line[2]);
 
-    f.set_len(flen as u64).unwrap();
+    // TODO: I've disabled set_len; is this best practice? scp doesn't do it.
+    //f.set_len(flen as u64).unwrap();
     fs::set_permissions(file_path, PermissionsExt::from_mode(fmode)).unwrap();
 
     let mut received: usize = 0;

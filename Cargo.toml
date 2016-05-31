@@ -6,6 +6,6 @@ authors = ["bnewbold <bnewbold@robocracy.org>"]
 [dependencies]
 getopts = "^0.2"
 daemonize = "^0.2"
-utp = "*"
+temp_utp = "*"
 sodiumoxide = "*"
 rustc-serialize = "0.3"

@@ -105,15 +105,15 @@ pub fn main_client() {
     opts.optopt("t", "to", "file or dir to write to (client side)", "FILE");
     opts.reqopt("", "host", "remote hostname to connect to", "HOSTNAME");
     opts.reqopt("", "port", "remote port to connect to", "PORT");
-    opts.reqopt("", "read-nonce", "secret read nonce", "NONCE");
-    opts.reqopt("", "write-nonce", "secret write nonce", "NONCE");
-    opts.reqopt("", "key", "secret key", "NONCE");
+    opts.optopt("", "read-nonce", "secret read nonce", "NONCE");
+    opts.optopt("", "write-nonce", "secret write nonce", "NONCE");
+    opts.optopt("", "key", "secret key", "NONCE");
     opts.optflag("", "no-crypto", "sends data in the clear (no crypto or verification)");
 
     assert!(args.len() >= 2 && args[1] == "client");
     let matches = match opts.parse(&args[2..]) {
         Ok(m) => { m }
-        Err(f) => { println!("Error parsing args!"); usage_client(opts); exit(-1); }
+        Err(f) => { println!("{}", f.to_string()); usage_client(opts); exit(-1); }
     };
 
     if matches.opt_present("h") {
@@ -124,6 +124,16 @@ pub fn main_client() {
     //let verbose: bool = matches.opt_present("v");
     let dir_mode: bool = matches.opt_present("d");
     let no_crypto: bool = matches.opt_present("no-crypto");
+
+    if !no_crypto {
+        if !matches.opt_present("key") ||
+                !matches.opt_present("read-nonce") ||
+                !matches.opt_present("write-nonce") {
+            println!("If not --no-crypto, --key and --read-nonce and --write-nonce are required.");
+            usage_client(opts);
+            exit(-1);
+        }
+    }
 
     match (matches.opt_present("f"), matches.opt_present("t")) {
         (true, true) | (false, false) => {

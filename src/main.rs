@@ -46,7 +46,7 @@ fn main() {
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => { m }
-        Err(f) => { println!("Error parsing args: {}", f); usage(opts); exit(-1); }
+        Err(f) => { println!("{}", f.to_string()); usage(opts); exit(-1); }
     };
 
     //let verbose: bool = matches.opt_present("v");

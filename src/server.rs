@@ -117,7 +117,7 @@ pub fn main_server() {
     assert!(args.len() >= 2 && args[1] == "server");
     let matches = match opts.parse(&args[2..]) {
         Ok(m) => { m }
-        Err(f) => { println!("Error parsing args!"); usage_server(opts); exit(-1); }
+        Err(f) => { println!("{}", f.to_string()); usage_server(opts); exit(-1); }
     };
 
     if matches.opt_present("h") {

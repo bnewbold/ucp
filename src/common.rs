@@ -7,6 +7,17 @@ use std::os::unix::fs::PermissionsExt;
 use std::io;
 use std::io::{Read, Write, BufRead, BufReader};
 use std::process::exit;
+use std::net;
+
+// This function is an ugly hack fall-back. It tries to find public IP address of this machine by
+// creating an outdoing connection
+pub fn get_local_ip() -> io::Result<net::IpAddr> {
+    
+    let dummy = try!(net::TcpListener::bind("0.0.0.0:0"));
+    let addr = try!(dummy.local_addr()).ip();
+    drop(dummy);
+    Ok(addr)
+}
 
 pub fn source_files<S: Read + Write>(stream: &mut S, file_path: &str, recursive: bool) {
     println!("SOURCE FILE: {}", file_path);
@@ -68,8 +79,8 @@ fn raw_read_line<S: Read + Write>(stream: &mut S) -> io::Result<String> {
     }
 }
 
-// TODO: it would be nice to be able to do BufReader/BufWriter on UtpStream. This would require
-// implementations of Read and Write on immutable references to UtpStream (a la TcpStream, File, et
+// TODO: it would be nice to be able to do BufReader/BufWriter on stream. This would require
+// implementations of Read and Write on immutable references to stream (a la TcpStream, File, et
 // al)
 pub fn sink_files<S: Read + Write>(stream: &mut S, file_path: &str, recursive: bool) {
     println!("SINK FILE: {}", file_path);

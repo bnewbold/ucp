@@ -2,12 +2,15 @@
 use super::common;
 
 use std::string::String;
+use std::str::{self, FromStr};
 use std::env;
+use std::net;
 use std::process;
 use std::process::exit;
 use std::process::Command;
 use getopts::Options;
-use utp::{UtpSocket, UtpStream};
+use udt::{self, UdtSocket};
+use udt_extras::{UdtStream};
 use crypto::{SecretStream, key2string, string2key, nonce2string, string2nonce};
 use sodiumoxide::crypto::secretbox;
 
@@ -57,8 +60,10 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
     println!("\tsecret read nonce: {}", remote_read_nonce);
     println!("\tsecret write nonce: {}", remote_write_nonce);
 
-    let mut socket = UtpSocket::connect((remote_host, remote_port)).unwrap();;
-    let mut stream: UtpStream = socket.into();
+    let addr = net::IpAddr::from_str(remote_host).unwrap();
+    let mut socket = UdtSocket::new(udt::SocketFamily::AFInet, udt::SocketType::Stream).unwrap();
+    socket.connect(net::SocketAddr::new(addr, remote_port)).unwrap();;
+    let mut stream: UdtStream = UdtStream::new(socket);
 
     if !no_crypto {
         let mut stream = SecretStream::new(stream);
@@ -128,9 +133,12 @@ pub fn main_client() {
         _ => {},
     }
 
-    let port = matches.opt_str("port").unwrap().parse::<u16>().unwrap();
-    let mut socket = UtpSocket::connect((matches.opt_str("host").unwrap().as_str(), port)).unwrap();
-    let mut stream: UtpStream = socket.into();
+    let remote_host = matches.opt_str("host").unwrap();
+    let remote_port = matches.opt_str("port").unwrap().parse::<u16>().unwrap();
+    let addr = net::IpAddr::from_str(&remote_host).unwrap();
+    let mut socket = UdtSocket::new(udt::SocketFamily::AFInet, udt::SocketType::Stream).unwrap();
+    socket.connect(net::SocketAddr::new(addr, remote_port)).unwrap();;
+    let mut stream: UdtStream = UdtStream::new(socket);
     println!("opened socket");
 
     if !no_crypto {

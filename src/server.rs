@@ -3,13 +3,15 @@ extern crate daemonize;
 
 use super::common;
 
-use std::str;
+use std::str::{self, FromStr};
 use std::env;
+use std::net;
 use std::env::home_dir;
 use std::process::exit;
 use getopts::Options;
-use utp::{UtpSocket, UtpStream, UtpListener};
+use udt::{self, UdtSocket};
 use crypto::{SecretStream, key2string, string2key, nonce2string, string2nonce};
+use udt_extras::{UdtStream};
 use sodiumoxide::crypto::secretbox;
 
 fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool, no_crypto: bool) {
@@ -18,13 +20,15 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool, no_cr
     // variable.
 
     // Connect to an hypothetical local server running on port 61000
-    let addr = "127.0.0.1:61000";
+    let listen_addr = common::get_local_ip().unwrap();
+    let port = 61000;
 
     // Accept connection from anybody
-    let listener = UtpListener::bind(addr).expect("Error binding to local port");
+    let listener = UdtSocket::new(udt::SocketFamily::AFInet, udt::SocketType::Stream).unwrap();
+    listener.bind(net::SocketAddr::new(listen_addr, port)).expect("Error binding to local port");
+    listener.listen(1).unwrap();
 
-    let listen_port = listener.local_addr().unwrap().port();
-    let listen_addr = listener.local_addr().unwrap().ip();
+    let listen_port = listener.getsockname().unwrap().port();
 
     let secret_key = secretbox::gen_key();
     let read_nonce = secretbox::gen_nonce();
@@ -65,10 +69,9 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool, no_cr
     } else {
         println!("Not daemonizing (DEBUG MODE)");
     }
-
     let (mut socket, _src) = listener.accept().unwrap();
-    println!("Got connection from {}", socket.peer_addr().unwrap());
-    let mut stream: UtpStream = socket.into();
+    println!("Got connection from {}", socket.getpeername().unwrap());
+    let mut stream: UdtStream = UdtStream::new(socket);
 
     if !no_crypto {
         let mut stream = SecretStream::new(stream);

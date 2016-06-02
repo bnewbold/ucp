@@ -3,20 +3,21 @@
 #![allow(unused_imports, unused_variables, unused_mut)]
 
 extern crate getopts;
-extern crate utp;
+extern crate udt;
 extern crate sodiumoxide;
 extern crate rustc_serialize;
 
 mod client;
 mod server;
 mod common;
+mod udt_extras;
 mod crypto;
 
 use std::str;
 use std::env;
 use std::process::exit;
 use getopts::Options;
-use utp::{UtpSocket, UtpListener};
+use udt::{UdtSocket};
 
 fn usage(opts: Options) {
     let brief = "usage:\tucp [-h] [-v] [[user@]host1:]srcfile [[user@]host2:]destfile";

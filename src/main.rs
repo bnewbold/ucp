@@ -2,6 +2,8 @@
 // XXX: re-enable these warnings
 #![allow(unused_imports, unused_variables, unused_mut)]
 
+#[macro_use] extern crate log;
+extern crate env_logger;
 extern crate getopts;
 extern crate udt;
 extern crate sodiumoxide;

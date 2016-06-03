@@ -1,5 +1,6 @@
 
 extern crate daemonize;
+extern crate syslog;
 
 use super::common;
 
@@ -11,6 +12,8 @@ use std::io;
 use std::error::Error;
 use std::env::home_dir;
 use std::process::exit;
+use log;
+use env_logger;
 use getopts::Options;
 use udt::{self, UdtSocket, UdtStatus};
 use crypto::{SecretStream, key2string, string2key, nonce2string, string2nonce};
@@ -26,7 +29,7 @@ pub fn get_local_ip() -> Result<net::IpAddr, String> {
             }
         },
         Err(_) => {
-            println!("Can't find $SSH_CONNECTION; running locally? Falling back to 127.0.0.1");
+            warn!("Can't find $SSH_CONNECTION; running locally? Falling back to 127.0.0.1");
             "127.0.0.1".to_string()
         },
     };
@@ -86,7 +89,9 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool, no_cr
     let write_nonce = secretbox::Nonce::from_slice(&[0; secretbox::NONCEBYTES]).unwrap();
     */
 
-    // Send back details so client can connect
+    info!("listening on {}:{}", listen_addr, listen_port);
+
+    // Send back (via SSH stdout) details so client can connect
     println!("UCP CONNECT {} {} {} {} {}",
         listen_addr,
         listen_port,
@@ -112,10 +117,10 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool, no_cr
             Err(e) => println!("{}", e),
         }
     } else {
-        println!("Not daemonizing (DEBUG MODE)");
+        info!("Not daemonizing (DEBUG MODE)");
     }
     let (mut socket, _src) = listener.accept().unwrap();
-    println!("Got connection from {}", socket.getpeername().unwrap());
+    info!("Got connection from {}", socket.getpeername().unwrap());
     let mut stream: UdtStream = UdtStream::new(socket);
 
     if !no_crypto {
@@ -150,7 +155,7 @@ pub fn main_server() {
 
     let mut opts = Options::new();
     opts.optflag("h", "help", "print this help menu");
-    //opts.optflag("v", "verbose", "more debugging messages");
+    opts.optflag("v", "verbose", "more debugging messages");
     opts.optflag("d", "dir-mode", "read/write a dir instead of file (server side)");
     opts.optflag("", "no-daemonize", "don't daemonize (for debuggign)");
     opts.optopt("f", "from", "file or dir to read from (server side)", "FILE");
@@ -168,7 +173,7 @@ pub fn main_server() {
         return;
     }
 
-    //let verbose: bool = matches.opt_present("v");
+    let verbose: bool = matches.opt_present("v");
     let dir_mode: bool = matches.opt_present("d");
     let daemonize: bool = !matches.opt_present("no-daemonize");
     let no_crypto: bool = matches.opt_present("no-crypto");
@@ -181,6 +186,29 @@ pub fn main_server() {
         _ => {},
     }
 
+    // Set up logging; syslog doesn't have a thingy
+    if daemonize {
+        match syslog::unix(syslog::Facility::LOG_USER) {
+            Ok(logger) => {
+                log::set_logger(|max_log_level| {
+                    max_log_level.set(log::LogLevelFilter::Info);
+                    logger
+                }).unwrap();
+            },
+            Err(_) => { 
+                println!("Couldn't connect to syslog (and in daemonize mode");
+                exit(-1);
+            }
+        }
+    } else {
+        let mut builder = env_logger::LogBuilder::new();
+        builder.parse("INFO");
+        if env::var("RUST_LOG").is_ok() {
+            builder.parse(&env::var("RUST_LOG").unwrap());
+        }
+        builder.init().unwrap();
+    }
+
     let (file_name, is_recv) = if matches.opt_present("f") {
         (matches.opt_str("f").unwrap(), false)
     } else {
@@ -189,7 +217,7 @@ pub fn main_server() {
     match run_server(&file_name, is_recv, dir_mode, daemonize, no_crypto) {
         Ok(_) => { exit(0); },
         Err(msg) => {
-            writeln!(&mut ::std::io::stderr(), "{}", msg).unwrap();
+            error!("{}", msg);
             exit(-1);
         }
     }

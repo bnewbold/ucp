@@ -38,7 +38,8 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
     let ssh_output = ssh_cmd.output().expect("couldn't get SSH sub-process output");
 
     if !ssh_output.status.success() {
-        panic!("SSH problem: {}", String::from_utf8_lossy(&ssh_output.stderr));
+        println!("Error on remote end: {}", String::from_utf8_lossy(&ssh_output.stderr));
+        exit(-1);
     }
 
     let reply = String::from_utf8_lossy(&ssh_output.stdout);

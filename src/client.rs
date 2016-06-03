@@ -29,6 +29,7 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
 
     let mut ssh_cmd = Command::new("ssh");
     ssh_cmd.arg(host)
+           .arg("-4")
            .arg("--")
            .arg("ucp")
            .arg("server")

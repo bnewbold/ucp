@@ -11,7 +11,7 @@ use std::error::Error;
 use std::env::home_dir;
 use std::process::exit;
 use getopts::Options;
-use udt::{self, UdtSocket};
+use udt::{self, UdtSocket, UdtStatus};
 use crypto::{SecretStream, key2string, string2key, nonce2string, string2nonce};
 use udt_extras::{UdtStream};
 use sodiumoxide::crypto::secretbox;
@@ -45,16 +45,26 @@ pub fn get_local_ip() -> Result<net::IpAddr, String> {
 
 fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool, no_crypto: bool) {
 
-    // TODO: try to detect the address the SSH connection came in on via the SSH_CONNECTION env
-    // variable.
-
     // Connect to an hypothetical local server running on port 61000
     let listen_addr = get_local_ip().unwrap();
-    let port = 61000;
 
-    // Accept connection from anybody
+    // Actually accept connection from anybody
+    let all_addr = net::IpAddr::V4(net::Ipv4Addr::from_str("0.0.0.0").unwrap());
+
     let listener = UdtSocket::new(udt::SocketFamily::AFInet, udt::SocketType::Stream).unwrap();
-    listener.bind(net::SocketAddr::new(listen_addr, port)).expect("Error binding to local port");
+
+    for port in 61000..62000 {
+        match listener.bind(net::SocketAddr::new(all_addr, port)) {
+            Ok(_) => { break; },
+            Err(e) => (),
+        }
+    }
+
+    if listener.getstate() != UdtStatus::OPENED {
+        println!("{:?}", listener.getstate());
+        println!("Couldn't bind to *any* valid port");
+    }
+
     listener.listen(1).unwrap();
 
     let listen_port = listener.getsockname().unwrap().port();

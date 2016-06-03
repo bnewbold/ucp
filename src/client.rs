@@ -39,15 +39,15 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
     let ssh_output = ssh_cmd.output().expect("couldn't get SSH sub-process output");
 
     if !ssh_output.status.success() {
-        println!("Error on remote end: {}", String::from_utf8_lossy(&ssh_output.stderr));
-        exit(-1);
+        return Err(format!("Error on remote end: {}",
+                           String::from_utf8_lossy(&ssh_output.stderr)));
     }
 
     let reply = String::from_utf8_lossy(&ssh_output.stdout);
-    println!("SSH reply: {}", reply);
+    //println!("SSH reply: {}", reply);
     let words: Vec<&str> = reply.split_whitespace().collect();
     if words.len() != 7 || words[0] != "UCP" || words[1] != "CONNECT" {
-        panic!("Unexpected data via SSH pipe (TCP)");
+        return Err("Unexpected data via SSH pipe (TCP)".to_string());
     }
     let remote_host = words[2];
     let remote_port = words[3].parse::<u16>().expect("failed to parse remote port number");
@@ -64,7 +64,10 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
 
     let addr = net::IpAddr::from_str(remote_host).unwrap();
     let mut socket = UdtSocket::new(udt::SocketFamily::AFInet, udt::SocketType::Stream).unwrap();
-    socket.connect(net::SocketAddr::new(addr, remote_port)).unwrap();;
+    match socket.connect(net::SocketAddr::new(addr, remote_port)) {
+        Ok(_) =>  { println!("Connected."); },
+        Err(e) => { return Err(e.err_msg); },
+    };
     let mut stream: UdtStream = UdtStream::new(socket);
 
     if !no_crypto {

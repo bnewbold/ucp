@@ -31,7 +31,7 @@ pub fn source_files<S: Read + Write>(stream: &mut S, file_path: &str, recursive:
         1 | 2 => {      // Warning
             unimplemented!();
         },
-        _ => { panic!("Unexpected status char!") },
+        _ => { return Err("Unexpected status char!".to_string()); },
     };
 
     let mut buf = [0; 4096];
@@ -52,7 +52,7 @@ pub fn source_files<S: Read + Write>(stream: &mut S, file_path: &str, recursive:
         1 | 2 => {      // Warning
             unimplemented!();
         },
-        _ => { panic!("Unexpected status char!") },
+        _ => { return Err("Unexpected status char!".to_string()) },
     };
     Ok(())
 }
@@ -89,7 +89,7 @@ pub fn sink_files<S: Read + Write>(stream: &mut S, file_path: &str, recursive: b
         'D' => { unimplemented!(); },
         'E' => { unimplemented!(); },
         'T' => { unimplemented!(); },
-        _   => { panic!(format!("Unexpected message type: {}", msg_type)); },
+        _   => { return Err(format!("Unexpected message type: {}", msg_type)); },
     };
     let line = raw_read_line(stream).unwrap();
     println!("got msg: {}", line);

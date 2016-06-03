@@ -1,0 +1,13 @@
+bnewbold@eschaton$ cargo profiler callgrind --bin target/debug/ucp -- /tmp/dummy localhost:dummy --no-crypto
+
+Profiling ucp with callgrind...
+
+Total Instructions...10,403,177,656
+
+2,204,020,815 (21.2%) socket.rs:socket::UtpSocket::recv
+-----------------------------------------------------------------------
+2,159,914,683 (20.8%) socket.rs:socket::UtpSocket::send_packet
+-----------------------------------------------------------------------
+936,415,826 (9.0%) ???:__GI_memset
+-----------------------------------------------------------------------
+[...]

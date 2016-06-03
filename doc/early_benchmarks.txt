@@ -1,0 +1,307 @@
+
+# Early Testing, May 30, 2016 (commit ccd871880d)
+
+Below are some results from early benchmarking of various simple UDP and TCP
+transfer tools.
+
+bnewbold@eschaton$ ls -lathr /tmp/dummy
+-rw-r--r-- 1 bnewbold bnewbold 256M May 30 16:27 /tmp/dummy
+
+### SCP
+
+bnewbold@eschaton$ time scp /tmp/dummy localhost:dummy
+real    0m1.972s
+user    0m1.488s
+sys     0m0.464s
+
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 39.88    0.001033        1033         1           wait4
+ 37.99    0.000984           0     16311           poll
+ 13.13    0.000340           0     32701     16311 write
+  8.07    0.000209           0     16394           read
+  0.93    0.000024           2        12           mprotect
+  0.00    0.000000           0        12           open
+  0.00    0.000000           0        20           close
+  0.00    0.000000           0        12           fstat
+  0.00    0.000000           0         2           lseek
+  0.00    0.000000           0        22           mmap
+  0.00    0.000000           0         5           munmap
+  0.00    0.000000           0         3           brk
+  0.00    0.000000           0        19           rt_sigaction
+  0.00    0.000000           0         1           rt_sigreturn
+  0.00    0.000000           0         5           ioctl
+  0.00    0.000000           0         7         7 access
+  0.00    0.000000           0         3           pipe
+  0.00    0.000000           0         3           alarm
+  0.00    0.000000           0         2           socket
+  0.00    0.000000           0         2         2 connect
+  0.00    0.000000           0         1           clone
+  0.00    0.000000           0         1           execve
+  0.00    0.000000           0         6           fcntl
+  0.00    0.000000           0         1           getuid
+  0.00    0.000000           0         3           getpgrp
+  0.00    0.000000           0         1           arch_prctl
+  0.00    0.000000           0         4           clock_gettime
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.002590                 65554     16320 total
+
+### UCP (with crypto)
+
+bnewbold@eschaton$ time ./ucp /tmp/dummy localhost:dummy
+real    1m9.058s
+user    1m0.036s
+sys     0m2.276s
+
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 93.39    0.012000       12000         1           wait4
+  3.57    0.000459           0    262153           sendto
+  2.32    0.000298           0    262152           recvfrom
+  0.37    0.000048           0     65549           read
+  0.35    0.000045           0    262152           setsockopt
+  0.00    0.000000           0        15           write
+  0.00    0.000000           0        11           open
+  0.00    0.000000           0        18           close
+  0.00    0.000000           0        10           fstat
+  0.00    0.000000           0        30           mmap
+  0.00    0.000000           0        16           mprotect
+  0.00    0.000000           0         6           munmap
+  0.00    0.000000           0         2           brk
+  0.00    0.000000           0         5           rt_sigaction
+  0.00    0.000000           0         1           rt_sigprocmask
+  0.00    0.000000           0         1           ioctl
+  0.00    0.000000           0         9         9 access
+  0.00    0.000000           0        26           madvise
+  0.00    0.000000           0         1           socket
+  0.00    0.000000           0         1           bind
+  0.00    0.000000           0         3           clone
+  0.00    0.000000           0         1           execve
+  0.00    0.000000           0         1         1 readlink
+  0.00    0.000000           0         2           getrlimit
+  0.00    0.000000           0         3           sigaltstack
+  0.00    0.000000           0         1           arch_prctl
+  0.00    0.000000           0         1           futex
+  0.00    0.000000           0         1           sched_getaffinity
+  0.00    0.000000           0         1           set_tid_address
+  0.00    0.000000           0         1           set_robust_list
+  0.00    0.000000           0         4           pipe2
+  0.00    0.000000           0         7           getrandom
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.012850                852185        10 total
+
+### UCP (w/o crypto)
+
+bnewbold@eschaton$ time ./ucp /tmp/dummy localhost:dummy --no-crypto
+real    0m12.405s
+user    0m9.412s
+sys     0m1.368s
+
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 68.17    0.001328           0    196620           sendto
+ 14.63    0.000285           0    196615           setsockopt
+  9.80    0.000191           0    196615         2 recvfrom
+  7.39    0.000144           0     65549           read
+  0.00    0.000000           0        15           write
+  0.00    0.000000           0        11           open
+  0.00    0.000000           0        18           close
+  0.00    0.000000           0        10           fstat
+  0.00    0.000000           0        30           mmap
+  0.00    0.000000           0        16           mprotect
+  0.00    0.000000           0         6           munmap
+  0.00    0.000000           0         2           brk
+  0.00    0.000000           0         5           rt_sigaction
+  0.00    0.000000           0         1           rt_sigprocmask
+  0.00    0.000000           0         1           ioctl
+  0.00    0.000000           0         9         9 access
+  0.00    0.000000           0        20           madvise
+  0.00    0.000000           0         1           socket
+  0.00    0.000000           0         1           bind
+  0.00    0.000000           0         3           clone
+  0.00    0.000000           0         1           execve
+  0.00    0.000000           0         1           wait4
+  0.00    0.000000           0         1         1 readlink
+  0.00    0.000000           0         2           getrlimit
+  0.00    0.000000           0         3           sigaltstack
+  0.00    0.000000           0         1           arch_prctl
+  0.00    0.000000           0         2           futex
+  0.00    0.000000           0         1           sched_getaffinity
+  0.00    0.000000           0         1           set_tid_address
+  0.00    0.000000           0         1           set_robust_list
+  0.00    0.000000           0         4           pipe2
+  0.00    0.000000           0         4           getrandom
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.001948                655570        12 total
+
+### UCP (w/o crypto, temp_utp)
+
+bnewbold@eschaton$ time ./ucp /tmp/dummy localhost:dummy --no-crypto
+real    0m11.234s
+user    0m7.420s
+sys     0m1.372s
+
+### CP
+
+bnewbold@eschaton$ time cp /tmp/dummy localhost:dummy
+real    0m0.270s
+user    0m0.004s
+sys     0m0.244s
+
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 85.76    0.076000        2815        27         1 open
+  7.16    0.006347         219        29           close
+  6.49    0.005755           3      2048           write
+  0.56    0.000493           0      2060           read
+  0.02    0.000021           1        39           mmap
+  0.00    0.000000           0         3           stat
+  0.00    0.000000           0        26           fstat
+  0.00    0.000000           0         1         1 lseek
+  0.00    0.000000           0        16           mprotect
+  0.00    0.000000           0         4           munmap
+  0.00    0.000000           0         3           brk
+  0.00    0.000000           0         2           rt_sigaction
+  0.00    0.000000           0         1           rt_sigprocmask
+  0.00    0.000000           0        10        10 access
+  0.00    0.000000           0         1           execve
+  0.00    0.000000           0         1           getrlimit
+  0.00    0.000000           0         1           geteuid
+  0.00    0.000000           0         2         2 statfs
+  0.00    0.000000           0         1           arch_prctl
+  0.00    0.000000           0         1         1 mount
+  0.00    0.000000           0         1           futex
+  0.00    0.000000           0         1           set_tid_address
+  0.00    0.000000           0         1           fadvise64
+  0.00    0.000000           0         1           set_robust_list
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.088616                  4280        15 total
+
+### UDT sendfile/recvfile
+
+Seems to be multi-threaded.
+
+"speed = 463.584Mbits/sec"
+(with strace: speed = 257.154Mbits/sec)
+
+bnewbold@eschaton$ time ./recvfile 127.0.0.1 54321 /tmp/dummy d
+real    0m4.855s
+user    0m0.196s
+sys     0m0.980
+
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 89.02    5.733621        2158      2657       402 futex
+  8.88    0.572045           3    187218      2008 recvmsg
+  1.12    0.072000        9000         8           open
+  0.91    0.058644           0    184365           writev
+  0.06    0.004000         444         9           close
+  0.00    0.000283           0       817           nanosleep
+  0.00    0.000080           0      3246           sendmsg
+  0.00    0.000030           0       207           mprotect
+  0.00    0.000000           0         6           read
+  0.00    0.000000           0         1           write
+  0.00    0.000000           0         7           fstat
+  0.00    0.000000           0         1           lseek
+  0.00    0.000000           0        27           mmap
+  0.00    0.000000           0         4           munmap
+  0.00    0.000000           0         7           brk
+  0.00    0.000000           0         2           rt_sigaction
+  0.00    0.000000           0         1           rt_sigprocmask
+  0.00    0.000000           0         8         8 access
+  0.00    0.000000           0         3           madvise
+  0.00    0.000000           0         1           socket
+  0.00    0.000000           0         1           bind
+  0.00    0.000000           0         2           getsockname
+  0.00    0.000000           0         3           setsockopt
+  0.00    0.000000           0         3           clone
+  0.00    0.000000           0         1           execve
+  0.00    0.000000           0         1           getrlimit
+  0.00    0.000000           0         1           arch_prctl
+  0.00    0.000000           0         1           set_tid_address
+  0.00    0.000000           0         4           set_robust_list
+------ ----------- ----------- --------- --------- ----------------
+100.00    6.440703                378612      2418 total
+
+### libutp demo program
+
+this one is a hack...
+
+bnewbold@eschaton$ time (cat /tmp/dummy | ./ucat-static 127.0.0.1 54321)
+real    0m7.439s
+user    0m0.912s
+sys     0m2.492s
+
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 56.45    0.002220           0    196609           sendto
+ 19.48    0.000766           0    371844           poll
+ 15.69    0.000617           0    255497     60502 recvfrom
+  8.39    0.000330           0     65542           read
+  0.00    0.000000           0         7           open
+  0.00    0.000000           0         7           close
+  0.00    0.000000           0         7           fstat
+  0.00    0.000000           0        22           mmap
+  0.00    0.000000           0        12           mprotect
+  0.00    0.000000           0         1           munmap
+  0.00    0.000000           0         3           brk
+  0.00    0.000000           0         3           rt_sigaction
+  0.00    0.000000           0         1           rt_sigprocmask
+  0.00    0.000000           0         8         8 access
+  0.00    0.000000           0         1           socket
+  0.00    0.000000           0         1           bind
+  0.00    0.000000           0         1           getsockname
+  0.00    0.000000           0         1           setsockopt
+  0.00    0.000000           0         1           execve
+  0.00    0.000000           0         1           getrlimit
+  0.00    0.000000           0         1           arch_prctl
+  0.00    0.000000           0         1           set_tid_address
+  0.00    0.000000           0         1           set_robust_list
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.003933                889572     60510 total
+
+### NC (TCP)
+
+bnewbold@eschaton$ time nc 127.0.0.1 54321 < /tmp/dummy
+real    0m2.050s
+user    0m0.008s
+sys     0m0.392s
+
+### SCP remote (adelie to nsa)
+
+Goes from ~3MB/sec to ~10MB/sec of throughput.
+
+bnewbold@adelie:~$ time scp /tmp/dummy bnewbold.the-nsa.org:
+real    0m34.858s
+user    0m3.073s
+sys     0m0.903s
+
+
+### UTP remote (adelie to nsa)
+
+ugh, *so* slow!
+
+bnewbold@adelie:~/src/libutp$ time ./ucat-static bnewbold.the-nsa.org 54321 < /tmp/dummy 
+real    3m57.462s
+user    0m1.787s
+sys     0m4.690s
+
+### UDT remote (adelie to nsa)
+
+bnewbold@bnewbold:~/src/git/udt4$ time ./app/recvfile adelie.robocracy.org 54321 /tmp/dummy ~/dummy 
+real    0m12.068s
+user    0m0.140s
+sys     0m1.060s
+
+### BBCP remote (adelie to nsa)
+
+bnewbold@adelie:~/src/bbcp$ time ./bin/amd64_linux/bbcp /tmp/dummy bnewbold.the-nsa.org:dummy
+real    1m45.054s
+user    0m0.037s
+sys     0m0.370s
+
+bnewbold@adelie:~/src/bbcp$ time ./bin/amd64_linux/bbcp -P 2 -w 2M -s 10 /tmp/dummy bnewbold.the-nsa.org:dummy
+real    0m18.942s
+user    0m0.017s
+sys     0m0.337s
+

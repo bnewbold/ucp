@@ -1,0 +1,44 @@
+
+On loopback network device, mtu is 65kb!
+Not 1500bytes, which is what wlan0 and eth0 have.
+
+scp seems to use ~16kbytes per "block"
+cp (disk-to-disk) is ~125kbytes per "block"
+
+wonder if scp is doing anything fancy with local domain sockets.
+
+ucp uses 4kb "blocks" to read from disk.
+
+utp is sending ~1.3kbyte messages (tiny), even over loopback
+
+looks like a reasonably large amount of time is being spent zeroing buffers:
+
+      920,293,418  ???:__GI_memset [/lib/x86_64-linux-gnu/libc-2.22.so]
+
+The 'utpcat' library that ships with the utp 
+
+canonical reference on this stuff is:
+    http://moo.nac.uci.edu/~hjm/HOWTO_move_data.html
+
+ended up using valgrind/callgrind like:
+
+    valgrind --tool=callgrind ./ucp /tmp/dummy bnewbold@localhost:dummy --no-crypto
+    callgrind_annotate callgrind.out.18253 --inclusive=yes
+    # optionally, --tree=both to annotate
+
+valgrind really slowed things down (like 5x or 10x slower, subjectively?). I
+think a tool like kcachegrind might be helpful, though I couldn't try that one
+(debian testing woes).
+
+almost useful tool! rust's `cargo profile` command:
+
+    cargo install cargo-profiler
+    cargo profiler callgrind --bin target/debug/ucp
+
+It has much better/easier output, but doesn't allow arguments to the binary
+being called (?!?!?). I created a pull request for this.
+
+QUESTIONS:
+- how does scp send network data w/o 'send' or 'sendfile'? Is it using fd
+  access to tcp socket?
+- what is the deal with setsockopt in utp?

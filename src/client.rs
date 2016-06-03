@@ -84,8 +84,6 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
             common::source_files(&mut stream, local_file, remote_is_dir)
         }
     }
-    // XXX: does Drop do this well enough?
-    //stream.close().unwrap();
 }
 
 fn usage_client(opts: Options) {
@@ -183,7 +181,4 @@ pub fn main_client() {
             exit(-1);
         }
     }
-
-    // XXX: does Drop do this well enough?
-    //stream.close().unwrap();
 }

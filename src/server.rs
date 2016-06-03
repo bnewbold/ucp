@@ -135,8 +135,6 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool, no_cr
             common::source_files(&mut stream, path, recursive)
         }
     }
-    // XXX: does Drop do this well enough?
-    //stream.close().unwrap();
 }
 
 fn usage_server(opts: Options) {

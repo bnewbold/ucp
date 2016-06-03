@@ -12,7 +12,7 @@ mod server;
 mod common;
 mod udt_extras;
 mod crypto;
-
+use std::io::Write;
 use std::str;
 use std::env;
 use std::process::exit;
@@ -75,7 +75,7 @@ fn main() {
         }
     }
 
-
+    let mut ret: Result<(), String>;
     match (srcfile.contains(":"), destfile.contains(":")) {
         (true, true)    => { println!("Can't have src and dest both be remote!"); exit(-1); },
         (false, false)  => { println!("One of src or dest should be remote!"); exit(-1); },
@@ -85,7 +85,7 @@ fn main() {
             let spl: Vec<&str> = srcfile.split(":").collect();
             let host = spl[0];
             let remote_file = spl[1];
-            client::run_client(host, local_file, remote_file, recursive, is_recv, no_crypto);
+            ret = client::run_client(host, local_file, remote_file, recursive, is_recv, no_crypto);
             },
         (false, true)   => {
             let is_recv = false;
@@ -93,7 +93,15 @@ fn main() {
             let spl: Vec<&str> = destfile.split(":").collect();
             let host = spl[0];
             let remote_file = spl[1];
-            client::run_client(host, local_file, remote_file, recursive, is_recv, no_crypto);
+            ret = client::run_client(host, local_file, remote_file, recursive, is_recv, no_crypto);
             },
+    }
+
+    match ret {
+        Ok(_) => { exit(0); },
+        Err(msg) => {
+            writeln!(&mut ::std::io::stderr(), "{}", msg).unwrap();
+            exit(-1);
+        }
     }
 }

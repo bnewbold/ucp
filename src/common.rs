@@ -9,7 +9,7 @@ use std::io::{Read, Write, BufRead, BufReader};
 use std::process::exit;
 use std::net;
 
-pub fn source_files<S: Read + Write>(stream: &mut S, file_path: &str, recursive: bool) {
+pub fn source_files<S: Read + Write>(stream: &mut S, file_path: &str, recursive: bool) -> Result<(), String> {
     println!("SOURCE FILE: {}", file_path);
     if recursive { unimplemented!(); }
     let mut f = File::open(file_path).unwrap();
@@ -54,6 +54,7 @@ pub fn source_files<S: Read + Write>(stream: &mut S, file_path: &str, recursive:
         },
         _ => { panic!("Unexpected status char!") },
     };
+    Ok(())
 }
 
 fn raw_read_line<S: Read + Write>(stream: &mut S) -> io::Result<String> {
@@ -72,7 +73,7 @@ fn raw_read_line<S: Read + Write>(stream: &mut S) -> io::Result<String> {
 // TODO: it would be nice to be able to do BufReader/BufWriter on stream. This would require
 // implementations of Read and Write on immutable references to stream (a la TcpStream, File, et
 // al)
-pub fn sink_files<S: Read + Write>(stream: &mut S, file_path: &str, recursive: bool) {
+pub fn sink_files<S: Read + Write>(stream: &mut S, file_path: &str, recursive: bool) -> Result<(), String> {
     println!("SINK FILE: {}", file_path);
     if recursive { unimplemented!(); }
     let mut f = File::create(file_path).unwrap();
@@ -115,4 +116,5 @@ pub fn sink_files<S: Read + Write>(stream: &mut S, file_path: &str, recursive: b
     f.sync_all().unwrap();
     // f.close(); XXX: closes automatically?
     stream.write(&[0]).unwrap();
+    Ok(())
 }

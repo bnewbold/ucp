@@ -1,6 +1,7 @@
 
 use super::common;
 
+use std::io::Write;
 use std::string::String;
 use std::str::{self, FromStr};
 use std::env;
@@ -14,7 +15,7 @@ use udt_extras::{UdtStream};
 use crypto::{SecretStream, key2string, string2key, nonce2string, string2nonce};
 use sodiumoxide::crypto::secretbox;
 
-pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir: bool, is_recv: bool, no_crypto: bool) {
+pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir: bool, is_recv: bool, no_crypto: bool) -> Result<(), String> {
     println!("\thost: {}", host);
     println!("\tlocal_file: {}", local_file);
     println!("\tremote_file: {}", remote_file);
@@ -72,15 +73,15 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
         stream.read_nonce = string2nonce(remote_write_nonce).unwrap();
         stream.write_nonce = string2nonce(remote_read_nonce).unwrap();
         if is_recv {
-            common::sink_files(&mut stream, local_file, remote_is_dir);
+            common::sink_files(&mut stream, local_file, remote_is_dir)
         } else {
-            common::source_files(&mut stream, local_file, remote_is_dir);
+            common::source_files(&mut stream, local_file, remote_is_dir)
         }
     } else {
         if is_recv {
-            common::sink_files(&mut stream, local_file, remote_is_dir);
+            common::sink_files(&mut stream, local_file, remote_is_dir)
         } else {
-            common::source_files(&mut stream, local_file, remote_is_dir);
+            common::source_files(&mut stream, local_file, remote_is_dir)
         }
     }
     // XXX: does Drop do this well enough?
@@ -152,23 +153,34 @@ pub fn main_client() {
     let mut stream: UdtStream = UdtStream::new(socket);
     println!("opened socket");
 
+    let mut ret: Result<(), String>;
     if !no_crypto {
         let mut stream = SecretStream::new(stream);
         stream.key = string2key(&matches.opt_str("key").unwrap()).unwrap();
         stream.read_nonce = string2nonce(&matches.opt_str("read-nonce").unwrap()).unwrap();
         stream.write_nonce = string2nonce(&matches.opt_str("write-nonce").unwrap()).unwrap();
         if matches.opt_present("f") {
-            common::source_files(&mut stream, &matches.opt_str("f").unwrap(), dir_mode);
-        }
-        if matches.opt_present("t") {
-            common::sink_files(&mut stream, &matches.opt_str("t").unwrap(), dir_mode);
+            ret = common::source_files(&mut stream, &matches.opt_str("f").unwrap(), dir_mode);
+        } else if matches.opt_present("t") {
+            ret = common::sink_files(&mut stream, &matches.opt_str("t").unwrap(), dir_mode);
+        } else {
+            ret = Err("Didn't Run".to_string());
         }
     } else {
         if matches.opt_present("f") {
-            common::source_files(&mut stream, &matches.opt_str("f").unwrap(), dir_mode);
+            ret = common::source_files(&mut stream, &matches.opt_str("f").unwrap(), dir_mode);
+        } else if matches.opt_present("t") {
+            ret = common::sink_files(&mut stream, &matches.opt_str("t").unwrap(), dir_mode);
+        } else {
+            ret = Err("Didn't Run".to_string());
         }
-        if matches.opt_present("t") {
-            common::sink_files(&mut stream, &matches.opt_str("t").unwrap(), dir_mode);
+    }
+
+    match ret {
+        Ok(_) => { exit(0); },
+        Err(msg) => {
+            writeln!(&mut ::std::io::stderr(), "{}", msg).unwrap();
+            exit(-1);
         }
     }
 

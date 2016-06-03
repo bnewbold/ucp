@@ -3,6 +3,7 @@ extern crate daemonize;
 
 use super::common;
 
+use std::io::Write;
 use std::str::{self, FromStr};
 use std::env;
 use std::net;
@@ -43,7 +44,7 @@ pub fn get_local_ip() -> Result<net::IpAddr, String> {
 }
 
 
-fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool, no_crypto: bool) {
+fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool, no_crypto: bool) -> Result<(), String> {
 
     // Connect to an hypothetical local server running on port 61000
     let listen_addr = get_local_ip().unwrap();
@@ -56,13 +57,18 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool, no_cr
     for port in 61000..62000 {
         match listener.bind(net::SocketAddr::new(all_addr, port)) {
             Ok(_) => { break; },
-            Err(e) => (),
+            Err(e) => {
+                if e.err_code != 1003 {
+                    // Code 1003 is "can't get port", meaning it's taken
+                    return Err(format!("Error binding {}: {}:  {}", port, e.err_code, e.err_msg));
+                };
+            }
         }
     }
 
     if listener.getstate() != UdtStatus::OPENED {
         println!("{:?}", listener.getstate());
-        println!("Couldn't bind to *any* valid port");
+        return Err("Couldn't bind to *any* valid port".to_string());
     }
 
     listener.listen(1).unwrap();
@@ -118,15 +124,15 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool, no_cr
         stream.read_nonce = read_nonce;
         stream.write_nonce = write_nonce;
         if is_recv {
-            common::sink_files(&mut stream, path, recursive);
+            common::sink_files(&mut stream, path, recursive)
         } else {
-            common::source_files(&mut stream, path, recursive);
+            common::source_files(&mut stream, path, recursive)
         }
     } else {
         if is_recv {
-            common::sink_files(&mut stream, path, recursive);
+            common::sink_files(&mut stream, path, recursive)
         } else {
-            common::source_files(&mut stream, path, recursive);
+            common::source_files(&mut stream, path, recursive)
         }
     }
     // XXX: does Drop do this well enough?
@@ -177,10 +183,16 @@ pub fn main_server() {
         _ => {},
     }
 
-    if matches.opt_present("f") {
-        run_server(&matches.opt_str("f").unwrap(), false, dir_mode, daemonize, no_crypto);
-    }
-    if matches.opt_present("t") {
-        run_server(&matches.opt_str("t").unwrap(), true, dir_mode, daemonize, no_crypto);
+    let (file_name, is_recv) = if matches.opt_present("f") {
+        (matches.opt_str("f").unwrap(), false)
+    } else {
+        (matches.opt_str("t").unwrap(), true)
+    };
+    match run_server(&file_name, is_recv, dir_mode, daemonize, no_crypto) {
+        Ok(_) => { exit(0); },
+        Err(msg) => {
+            writeln!(&mut ::std::io::stderr(), "{}", msg).unwrap();
+            exit(-1);
+        }
     }
 }

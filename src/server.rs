@@ -123,22 +123,27 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool, no_cr
     info!("Got connection from {}", socket.getpeername().unwrap());
     let mut stream: UdtStream = UdtStream::new(socket);
 
+    let io_result: io::Result<()>;
     if !no_crypto {
         let mut stream = SecretStream::new(stream);
         stream.key = secret_key;
         stream.read_nonce = read_nonce;
         stream.write_nonce = write_nonce;
         if is_recv {
-            common::sink_files(&mut stream, path, recursive)
+            io_result = common::sink_files(&mut stream, path, recursive)
         } else {
-            common::source_files(&mut stream, path, recursive)
+            io_result = common::source_files(&mut stream, path, recursive)
         }
     } else {
         if is_recv {
-            common::sink_files(&mut stream, path, recursive)
+            io_result = common::sink_files(&mut stream, path, recursive)
         } else {
-            common::source_files(&mut stream, path, recursive)
+            io_result = common::source_files(&mut stream, path, recursive)
         }
+    }
+    match io_result {
+        Ok(_) => Ok(()),
+        Err(e) => Err(e.description().to_string()),
     }
 }
 

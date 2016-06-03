@@ -6,7 +6,9 @@ use std::string::String;
 use std::str::{self, FromStr};
 use std::env;
 use std::net;
+use std::io;
 use std::process;
+use std::error::Error;
 use std::process::exit;
 use std::process::Command;
 use getopts::Options;
@@ -70,22 +72,27 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
     };
     let mut stream: UdtStream = UdtStream::new(socket);
 
+    let io_result: io::Result<()>;
     if !no_crypto {
         let mut stream = SecretStream::new(stream);
         stream.key = string2key(remote_secret).unwrap();
         stream.read_nonce = string2nonce(remote_write_nonce).unwrap();
         stream.write_nonce = string2nonce(remote_read_nonce).unwrap();
         if is_recv {
-            common::sink_files(&mut stream, local_file, remote_is_dir)
+            io_result = common::sink_files(&mut stream, local_file, remote_is_dir);
         } else {
-            common::source_files(&mut stream, local_file, remote_is_dir)
+            io_result = common::source_files(&mut stream, local_file, remote_is_dir);
         }
     } else {
         if is_recv {
-            common::sink_files(&mut stream, local_file, remote_is_dir)
+            io_result = common::sink_files(&mut stream, local_file, remote_is_dir);
         } else {
-            common::source_files(&mut stream, local_file, remote_is_dir)
+            io_result = common::source_files(&mut stream, local_file, remote_is_dir);
         }
+    }
+    match io_result {
+        Ok(_) => Ok(()),
+        Err(e) => Err(e.description().to_string()),
     }
 }
 
@@ -154,7 +161,7 @@ pub fn main_client() {
     let mut stream: UdtStream = UdtStream::new(socket);
     println!("opened socket");
 
-    let mut ret: Result<(), String>;
+    let mut ret: io::Result<()>;
     if !no_crypto {
         let mut stream = SecretStream::new(stream);
         stream.key = string2key(&matches.opt_str("key").unwrap()).unwrap();
@@ -165,7 +172,7 @@ pub fn main_client() {
         } else if matches.opt_present("t") {
             ret = common::sink_files(&mut stream, &matches.opt_str("t").unwrap(), dir_mode);
         } else {
-            ret = Err("Didn't Run".to_string());
+            unreachable!();
         }
     } else {
         if matches.opt_present("f") {
@@ -173,14 +180,14 @@ pub fn main_client() {
         } else if matches.opt_present("t") {
             ret = common::sink_files(&mut stream, &matches.opt_str("t").unwrap(), dir_mode);
         } else {
-            ret = Err("Didn't Run".to_string());
+            unreachable!();
         }
     }
 
     match ret {
         Ok(_) => { exit(0); },
-        Err(msg) => {
-            writeln!(&mut ::std::io::stderr(), "{}", msg).unwrap();
+        Err(err) => {
+            writeln!(&mut ::std::io::stderr(), "{}", err.description()).unwrap();
             exit(-1);
         }
     }

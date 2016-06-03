@@ -4,7 +4,8 @@ use std::io;
 use std::cmp::min;
 use std::io::{Read,Write, ErrorKind};
 use sodiumoxide::crypto::secretbox;
-use sodiumoxide::crypto::secretbox::{Key, Nonce};
+use sodiumoxide::crypto::stream::aes128ctr;
+use sodiumoxide::crypto::stream::aes128ctr::{Key, Nonce};
 use rustc_serialize::base64::{ToBase64, FromBase64, STANDARD};
 use std::mem::transmute;
 
@@ -25,9 +26,9 @@ impl<S: Read+Write> SecretStream<S> {
     pub fn new(stream: S) -> SecretStream<S> {
         SecretStream {
             inner: stream,
-            read_nonce: secretbox::gen_nonce(),
-            write_nonce: secretbox::gen_nonce(),
-            key: secretbox::gen_key(),
+            read_nonce: aes128ctr::gen_nonce(),
+            write_nonce: aes128ctr::gen_nonce(),
+            key: aes128ctr::gen_key(),
             read_buf: [0; CHUNK_SIZE+512],
             read_buf_offset: 0,
             read_buf_len: 0,
@@ -65,11 +66,7 @@ impl<S: Read+Write> Read for SecretStream<S> {
         println!("\tnonce: {}", nonce2string(&self.write_nonce));
         println!("\tkey: {}", key2string(&self.key));
         */
-        let cleartext = match secretbox::open(&self.read_buf[..len], &self.read_nonce, &self.key) {
-            Ok(cleartext) => cleartext,
-            Err(_) => { return Err(io::Error::new(ErrorKind::InvalidData,
-                "Failed to decrypt message (could mean corruption or malicious attack"))},
-        };
+        let cleartext = aes128ctr::stream_xor(&self.read_buf[..len], &self.read_nonce, &self.key);
         self.read_nonce.increment_le_inplace();
         let clen = cleartext.len() as usize;
 
@@ -92,7 +89,7 @@ impl<S: Read+Write> Write for SecretStream<S> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         assert!(buf.len() < u32::MAX as usize);
         let raw_len = buf.len() as u32;
-        let ciphertext = secretbox::seal(buf, &self.write_nonce, &self.key);
+        let ciphertext = aes128ctr::stream_xor(buf, &self.write_nonce, &self.key);
 
         let len = ciphertext.len() as u32;
         let header_buf: [u8; 4] = unsafe { transmute(len.to_be()) };

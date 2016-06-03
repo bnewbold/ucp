@@ -18,7 +18,7 @@ use getopts::Options;
 use udt::{self, UdtSocket, UdtStatus};
 use crypto::{SecretStream, key2string, string2key, nonce2string, string2nonce};
 use udt_extras::{UdtStream};
-use sodiumoxide::crypto::secretbox;
+use sodiumoxide::crypto::stream::aes128ctr;
 
 pub fn get_local_ip() -> Result<net::IpAddr, String> {
     let ip_str = match env::var("SSH_CONNECTION") {
@@ -82,9 +82,9 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool, no_cr
     // This is the hack; we'll rebind below
     let listen_port = listen_port + 1;
 
-    let secret_key = secretbox::gen_key();
-    let read_nonce = secretbox::gen_nonce();
-    let write_nonce = secretbox::gen_nonce();
+    let secret_key = aes128ctr::gen_key();
+    let read_nonce = aes128ctr::gen_nonce();
+    let write_nonce = aes128ctr::gen_nonce();
 
     /* XXX: DEBUG:
     assert!(secret_key == string2key(&key2string(&secret_key)).unwrap());

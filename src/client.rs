@@ -73,11 +73,13 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
 
     let addr = net::IpAddr::from_str(remote_host).unwrap();
     let mut socket = UdtSocket::new(udt::SocketFamily::AFInet, udt::SocketType::Stream).unwrap();
+    println!("Connecting to: {}:{}", addr, remote_port);
     match socket.connect(net::SocketAddr::new(addr, remote_port)) {
         Ok(_) =>  { println!("Connected."); },
         Err(e) => { return Err(e.err_msg); },
     };
     let mut stream: UdtStream = UdtStream::new(socket);
+    println!("opened socket");
 
     let io_result: io::Result<()>;
     if !no_crypto {
@@ -164,9 +166,9 @@ pub fn main_client() {
     let remote_port = matches.opt_str("port").unwrap().parse::<u16>().unwrap();
     let addr = net::IpAddr::from_str(&remote_host).unwrap();
     let mut socket = UdtSocket::new(udt::SocketFamily::AFInet, udt::SocketType::Stream).unwrap();
+    println!("Connecting to: {}:{}", addr, remote_port);
     socket.connect(net::SocketAddr::new(addr, remote_port)).unwrap();;
     let mut stream: UdtStream = UdtStream::new(socket);
-    println!("opened socket");
 
     let mut ret: io::Result<()>;
     if !no_crypto {

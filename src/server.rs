@@ -57,6 +57,9 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool, no_cr
 
     let listener = UdtSocket::new(udt::SocketFamily::AFInet, udt::SocketType::Stream).unwrap();
 
+    // Big hack going on here: need to find an open port, then increment by one and rebind below.
+    // This need seems to be driven by the daemonization process, but only with the libudt library
+    // (not the old UTP stuff)?
     for port in 61000..62000 {
         match listener.bind(net::SocketAddr::new(all_addr, port)) {
             Ok(_) => { break; },
@@ -74,9 +77,10 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool, no_cr
         return Err("Couldn't bind to *any* valid port".to_string());
     }
 
-    listener.listen(1).unwrap();
-
     let listen_port = listener.getsockname().unwrap().port();
+
+    // This is the hack; we'll rebind below
+    let listen_port = listen_port + 1;
 
     let secret_key = secretbox::gen_key();
     let read_nonce = secretbox::gen_nonce();
@@ -89,8 +93,6 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool, no_cr
     let write_nonce = secretbox::Nonce::from_slice(&[0; secretbox::NONCEBYTES]).unwrap();
     */
 
-    info!("listening on {}:{}", listen_addr, listen_port);
-
     // Send back (via SSH stdout) details so client can connect
     println!("UCP CONNECT {} {} {} {} {}",
         listen_addr,
@@ -98,7 +100,6 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool, no_cr
         key2string(&secret_key),
         nonce2string(&read_nonce),
         nonce2string(&write_nonce));
-
 
     // TODO: maybe wait for an ACK of some sort here before daemonizing?
 
@@ -109,18 +110,24 @@ fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool, no_cr
             Some(path) => path,
             None => env::current_dir().unwrap(),
         };
-        // XXX: should maybe use log/syslog from here on?
         let daemonizer = daemonize::Daemonize::new().working_directory(working_dir);
 
         match daemonizer.start() {
-            Ok(_) => println!("Success, daemonized"),
-            Err(e) => println!("{}", e),
+            Ok(_) => info!("daemonized"),
+            Err(e) => { return Err(format!("Failed to daemonize: {:?}", e)); },
         }
     } else {
         info!("Not daemonizing (DEBUG MODE)");
     }
+
+    listener.close().unwrap();
+    let listener = UdtSocket::new(udt::SocketFamily::AFInet, udt::SocketType::Stream).unwrap();
+    listener.bind(net::SocketAddr::new(all_addr, listen_port)).unwrap();
+    listener.listen(1).unwrap();
+
+    info!("waiting for connection on {}:{}", listen_addr, listen_port);
     let (mut socket, _src) = listener.accept().unwrap();
-    info!("Got connection from {}", socket.getpeername().unwrap());
+    info!("got connection from {}", socket.getpeername().unwrap());
     let mut stream: UdtStream = UdtStream::new(socket);
 
     let io_result: io::Result<()>;

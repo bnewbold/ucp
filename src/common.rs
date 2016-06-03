@@ -13,6 +13,8 @@ fn fake_io_error(msg: &str) -> io::Result<()> {
     Err(io::Error::new(io::ErrorKind::Other, msg))
 }
 
+const CHUNK_SIZE: usize = 1024*16;
+
 pub fn source_files<S: Read + Write>(stream: &mut S, file_path: &str, recursive: bool) -> io::Result<()> {
     println!("SOURCE FILE: {}", file_path);
     if recursive { unimplemented!(); }
@@ -38,7 +40,7 @@ pub fn source_files<S: Read + Write>(stream: &mut S, file_path: &str, recursive:
         _ => { return fake_io_error("Unexpected status char!"); },
     };
 
-    let mut buf = [0; 4096];
+    let mut buf = [0; CHUNK_SIZE];
     let mut sent: usize = 0;
     while sent < flen {
         let rlen = try!(f.read(&mut buf));
@@ -83,7 +85,7 @@ pub fn sink_files<S: Read + Write>(stream: &mut S, file_path: &str, recursive: b
     let mut f = try!(File::create(file_path));
 
     let mut byte_buf = [0; 1];
-    let mut buf = [0; 4096];
+    let mut buf = [0; CHUNK_SIZE];
     try!(stream.read_exact(&mut byte_buf));
     let msg_type = byte_buf[0];
     match msg_type as char {

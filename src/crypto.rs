@@ -9,13 +9,14 @@ use rustc_serialize::base64::{ToBase64, FromBase64, STANDARD};
 use std::mem::transmute;
 
 // TODO: handle case of splitting up writes > 2^32 bytes into multiple small writes
+const CHUNK_SIZE: usize = 1024*64;
 
 pub struct SecretStream<S: Read+Write> {
     pub read_nonce: Nonce,
     pub write_nonce: Nonce,
     pub key: Key,
     inner: S,
-    read_buf: [u8; 4096+1024],
+    read_buf: [u8; CHUNK_SIZE+512],
     read_buf_offset: usize,
     read_buf_len: usize,
 }
@@ -27,7 +28,7 @@ impl<S: Read+Write> SecretStream<S> {
             read_nonce: secretbox::gen_nonce(),
             write_nonce: secretbox::gen_nonce(),
             key: secretbox::gen_key(),
-            read_buf: [0; 4096+1024],
+            read_buf: [0; CHUNK_SIZE+512],
             read_buf_offset: 0,
             read_buf_len: 0,
         }

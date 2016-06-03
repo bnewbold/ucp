@@ -17,11 +17,15 @@ use udt_extras::{UdtStream};
 use crypto::{SecretStream, key2string, string2key, nonce2string, string2nonce};
 use sodiumoxide::crypto::secretbox;
 
-pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir: bool, is_recv: bool, no_crypto: bool) -> Result<(), String> {
-    println!("\thost: {}", host);
-    println!("\tlocal_file: {}", local_file);
-    println!("\tremote_file: {}", remote_file);
-    println!("\tis_recv: {}", is_recv);
+pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir: bool, is_recv: bool, no_crypto: bool, verbose: bool) -> Result<(), String> {
+
+    if verbose {
+        println!("local details:");
+        println!("\thost: {}", host);
+        println!("\tlocal_file: {}", local_file);
+        println!("\tremote_file: {}", remote_file);
+        println!("\tis_recv: {}", is_recv);
+    };
 
     let mut ssh_cmd = Command::new("ssh");
     ssh_cmd.arg(host)
@@ -57,12 +61,14 @@ pub fn run_client(host: &str, local_file: &str, remote_file: &str, remote_is_dir
     let remote_read_nonce = words[5];
     let remote_write_nonce = words[6];
 
-    println!("Got remote details:");
-    println!("\tport: {}", remote_port);
-    println!("\thost: {}", remote_host);
-    println!("\tsecret key: {}", remote_secret);
-    println!("\tsecret read nonce: {}", remote_read_nonce);
-    println!("\tsecret write nonce: {}", remote_write_nonce);
+    if verbose {
+        println!("Got remote details:");
+        println!("\tport: {}", remote_port);
+        println!("\thost: {}", remote_host);
+        println!("\tsecret key: {}", remote_secret);
+        println!("\tsecret read nonce: {}", remote_read_nonce);
+        println!("\tsecret write nonce: {}", remote_write_nonce);
+    };
 
     let addr = net::IpAddr::from_str(remote_host).unwrap();
     let mut socket = UdtSocket::new(udt::SocketFamily::AFInet, udt::SocketType::Stream).unwrap();

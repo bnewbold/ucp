@@ -1,0 +1,24 @@
+
+- note in README: IPv4 only
+
+bugs:
+- encrypt message length in addition to everything else
+- what if filename has spaces? assert fails
+
+features:
+- tests!
+- actual crypto using sodiumoxide (or similar...)
+- a "UCP VERSION" intro mesage before "UCP CONNECT"
+- make srcpath a list: can send multiple files as long as destination is a directory
+- need to do more sophisticated host splitting to handle IPv6 addresses
+- progress bar (per-file?)
+
+packaing/meta stuff:
+- benchmarking to the-nsa.org
+- --version flag
+- README
+- man page
+- cargo package upload
+- debian (.deb) packaging stuff
+- ufw firewall entry (/etc/ufw/applications.d/ucp)
+- bash completion file (/etc/bash_completion.d/ucp)

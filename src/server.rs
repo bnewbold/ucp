@@ -6,6 +6,8 @@ use super::common;
 use std::str::{self, FromStr};
 use std::env;
 use std::net;
+use std::io;
+use std::error::Error;
 use std::env::home_dir;
 use std::process::exit;
 use getopts::Options;
@@ -14,13 +16,40 @@ use crypto::{SecretStream, key2string, string2key, nonce2string, string2nonce};
 use udt_extras::{UdtStream};
 use sodiumoxide::crypto::secretbox;
 
+pub fn get_local_ip() -> Result<net::IpAddr, String> {
+    let ip_str = match env::var("SSH_CONNECTION") {
+        Ok(val) => {
+            match val.split(' ').nth(2) {
+                Some(x) => x.to_string(),
+                None => { return Err(format!("Failed to parse $SSH_CONNECTION: {}", val.to_string())); },
+            }
+        },
+        Err(_) => {
+            println!("Can't find $SSH_CONNECTION; running locally? Falling back to 127.0.0.1");
+            "127.0.0.1".to_string()
+        },
+    };
+
+    // First try IPv4
+    match net::Ipv4Addr::from_str(&ip_str) {
+        Ok(x) => { return Ok(net::IpAddr::V4(x)) },
+        Err(_) => (),
+    };
+    // Then IPv6
+    match net::Ipv6Addr::from_str(&ip_str) {
+        Ok(x) => { return Ok(net::IpAddr::V6(x)) },
+        Err(e) => { return Err(e.description().to_string()); },
+    };
+}
+
+
 fn run_server(path: &str, is_recv: bool, recursive: bool, daemonize: bool, no_crypto: bool) {
 
     // TODO: try to detect the address the SSH connection came in on via the SSH_CONNECTION env
     // variable.
 
     // Connect to an hypothetical local server running on port 61000
-    let listen_addr = common::get_local_ip().unwrap();
+    let listen_addr = get_local_ip().unwrap();
     let port = 61000;
 
     // Accept connection from anybody

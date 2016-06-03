@@ -9,16 +9,6 @@ use std::io::{Read, Write, BufRead, BufReader};
 use std::process::exit;
 use std::net;
 
-// This function is an ugly hack fall-back. It tries to find public IP address of this machine by
-// creating an outdoing connection
-pub fn get_local_ip() -> io::Result<net::IpAddr> {
-    
-    let dummy = try!(net::TcpListener::bind("0.0.0.0:0"));
-    let addr = try!(dummy.local_addr()).ip();
-    drop(dummy);
-    Ok(addr)
-}
-
 pub fn source_files<S: Read + Write>(stream: &mut S, file_path: &str, recursive: bool) {
     println!("SOURCE FILE: {}", file_path);
     if recursive { unimplemented!(); }

@@ -46,7 +46,7 @@ sys     0m0.464s
 ------ ----------- ----------- --------- --------- ----------------
 100.00    0.002590                 65554     16320 total
 
-### UCP (with crypto)
+### UCP/UTP (with crypto)
 
 bnewbold@eschaton$ time ./ucp /tmp/dummy localhost:dummy
 real    1m9.058s
@@ -90,7 +90,7 @@ sys     0m2.276s
 ------ ----------- ----------- --------- --------- ----------------
 100.00    0.012850                852185        10 total
 
-### UCP (w/o crypto)
+### UCP/UTP (w/o crypto)
 
 bnewbold@eschaton$ time ./ucp /tmp/dummy localhost:dummy --no-crypto
 real    0m12.405s
@@ -304,4 +304,74 @@ bnewbold@adelie:~/src/bbcp$ time ./bin/amd64_linux/bbcp -P 2 -w 2M -s 10 /tmp/du
 real    0m18.942s
 user    0m0.017s
 sys     0m0.337s
+
+### PING shorter remote (recurse to nsa)
+
+bnewbold@eschaton$ ping factory.the-nsa.org
+PING factory.the-nsa.org (82.221.106.119) 56(84) bytes of data.
+64 bytes from factory.the-nsa.org (82.221.106.119): icmp_seq=1 ttl=53 time=109 ms
+64 bytes from factory.the-nsa.org (82.221.106.119): icmp_seq=2 ttl=53 time=109 ms
+64 bytes from factory.the-nsa.org (82.221.106.119): icmp_seq=3 ttl=53 time=108 ms
+
+
+### UCP:UDT shorter remote, no crypto (recurse to nsa)
+
+bnewbold@eschaton$ time ucp --no-crypto /tmp/dummy factory:dummy
+real    0m10.063s
+user    0m1.100s
+sys     0m2.236s
+
+bnewbold@eschaton$ time ./ucp --no-crypto /tmp/dummy factory:dummy
+real    0m9.525s
+user    0m0.980s
+sys     0m2.224s
+
+
+### UCP:UDT shorter remote, with crypto (recurse to nsa)
+
+bnewbold@eschaton$ time ./ucp /tmp/dummy factory:dummy
+real    1m15.165s
+user    0m57.908s
+sys     0m2.720s
+
+### SCP shorter remote (recurse to nsa)
+
+bnewbold@eschaton$ time scp -4 /tmp/dummy factory:dummy
+real    0m17.076s
+user    0m4.536s
+sys     0m1.276s
+
+bnewbold@eschaton$ time scp -4 /tmp/dummy factory:dummy
+real    0m21.076s
+user    0m4.444s
+sys     0m1.560s
+
+### UDT remote (recurse to nsa)
+
+bnewbold@eschaton$ time ./recvfile factory.the-nsa.org 54321 /tmp/dummy /tmp/asdfasdfasdf
+real    0m9.559s
+user    0m0.356s
+sys     0m2.104s
+
+### HTTP remote (recurse to nsa; nginx and wget)
+
+bnewbold@eschaton$ time wget -4 http://factory.the-nsa.org/dummy
+real    0m12.041s
+user    0m0.156s
+sys     0m1.564s
+
+### BBCP remote (recurse to nsa)
+
+bnewbold@eschaton$ time ./bin/amd64_linux/bbcp -P 2 -w 2M -s 10 /tmp/dummy factory@factory.the-nsa.org:dummy
+real    0m15.954s
+user    0m0.064s
+sys     0m0.792s
+
+
+### UCP:UDT local with AES (not-in-place) crypto
+
+bnewbold@eschaton$ time ./ucp /tmp/dummy 127.0.0.1:dummy
+real    0m50.985s
+user    0m42.460s
+sys     0m0.532s
 

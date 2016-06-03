@@ -42,3 +42,8 @@ QUESTIONS:
 - how does scp send network data w/o 'send' or 'sendfile'? Is it using fd
   access to tcp socket?
 - what is the deal with setsockopt in utp?
+
+Beware that data size isn't equal to encrypted data size! Secret box adds the
+nonce as part of the encrypted data.
+
+mosh uses AES-128 with OCB mode.
